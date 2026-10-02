@@ -1,62 +1,35 @@
-var __create = Object.create;
 var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // api/serverless.ts
-var serverless_exports = {};
-__export(serverless_exports, {
-  default: () => serverless_default
-});
-module.exports = __toCommonJS(serverless_exports);
-var import_express2 = __toESM(require("express"), 1);
+import express from "express";
 
 // server/db.ts
-var import_sql = __toESM(require("sql.js"), 1);
-var import_fs = __toESM(require("fs"), 1);
-var import_path = __toESM(require("path"), 1);
-var import_bcryptjs = __toESM(require("bcryptjs"), 1);
+import initSqlJs from "sql.js";
+import fs from "fs";
+import path from "path";
+import bcrypt from "bcryptjs";
 var dbInstance = null;
-var DATA_DIR = import_path.default.join(process.cwd(), "data");
-var DB_FILE = import_path.default.join(DATA_DIR, "digiskool.sqlite");
+var DATA_DIR = path.join(process.cwd(), "data");
+var DB_FILE = path.join(DATA_DIR, "digiskool.sqlite");
 function ensureDataDirectory() {
   try {
-    if (!import_fs.default.existsSync(DATA_DIR)) {
-      import_fs.default.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-    const testFile = import_path.default.join(DATA_DIR, ".write_test");
-    import_fs.default.writeFileSync(testFile, "ok");
-    import_fs.default.unlinkSync(testFile);
+    const testFile = path.join(DATA_DIR, ".write_test");
+    fs.writeFileSync(testFile, "ok");
+    fs.unlinkSync(testFile);
   } catch (err) {
     console.warn(`Cannot write to ${DATA_DIR}, falling back to /tmp/digiskool_data:`, err);
-    DATA_DIR = import_path.default.join("/tmp", "digiskool_data");
-    if (!import_fs.default.existsSync(DATA_DIR)) {
-      import_fs.default.mkdirSync(DATA_DIR, { recursive: true });
+    DATA_DIR = path.join("/tmp", "digiskool_data");
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-    DB_FILE = import_path.default.join(DATA_DIR, "digiskool.sqlite");
+    DB_FILE = path.join(DATA_DIR, "digiskool.sqlite");
   }
 }
 async function getDb() {
@@ -64,32 +37,32 @@ async function getDb() {
   ensureDataDirectory();
   let wasmBinary;
   const candidates = [
-    import_path.default.join(__dirname, "sql-wasm.wasm"),
-    import_path.default.join(process.cwd(), "server", "sql-wasm.wasm"),
-    import_path.default.join(process.cwd(), "node_modules", "sql.js", "dist", "sql-wasm.wasm"),
-    import_path.default.join(__dirname, "../node_modules/sql.js/dist/sql-wasm.wasm")
+    path.join(__dirname, "sql-wasm.wasm"),
+    path.join(process.cwd(), "server", "sql-wasm.wasm"),
+    path.join(process.cwd(), "node_modules", "sql.js", "dist", "sql-wasm.wasm"),
+    path.join(__dirname, "../node_modules/sql.js/dist/sql-wasm.wasm")
   ];
   for (const candidate of candidates) {
     try {
-      if (import_fs.default.existsSync(candidate)) {
-        wasmBinary = import_fs.default.readFileSync(candidate);
+      if (fs.existsSync(candidate)) {
+        wasmBinary = fs.readFileSync(candidate);
         break;
       }
     } catch {
     }
   }
-  const SQL = await (0, import_sql.default)(
+  const SQL = await initSqlJs(
     wasmBinary ? { wasmBinary } : {
       locateFile: (file) => {
         for (const candidate of candidates) {
-          if (import_fs.default.existsSync(candidate)) return candidate;
+          if (fs.existsSync(candidate)) return candidate;
         }
         return file;
       }
     }
   );
-  if (import_fs.default.existsSync(DB_FILE)) {
-    const fileBuffer = import_fs.default.readFileSync(DB_FILE);
+  if (fs.existsSync(DB_FILE)) {
+    const fileBuffer = fs.readFileSync(DB_FILE);
     dbInstance = new SQL.Database(fileBuffer);
   } else {
     dbInstance = new SQL.Database();
@@ -103,7 +76,7 @@ function saveDb() {
   if (!dbInstance) return;
   try {
     const data = dbInstance.export();
-    import_fs.default.writeFileSync(DB_FILE, Buffer.from(data));
+    fs.writeFileSync(DB_FILE, Buffer.from(data));
   } catch (err) {
     console.error("Failed to save SQLite database to disk:", err);
   }
@@ -780,7 +753,7 @@ function initSchemaAndSeed(db2) {
     ('teacher', 'Teacher', 'Faculty and class management', 0),
     ('student', 'Student', 'Student portal access', 0);
   `);
-  const defaultPasswordHash = import_bcryptjs.default.hashSync("DigiSkool@2025", 10);
+  const defaultPasswordHash = bcrypt.hashSync("DigiSkool@2025", 10);
   const adminUser = queryOne('SELECT id FROM users WHERE LOWER(email) = "adnanmrao@gmail.com";');
   if (!adminUser) {
     db2.run(`
@@ -1427,13 +1400,13 @@ function initSchemaAndSeed(db2) {
 }
 
 // server/routes.ts
-var import_express = require("express");
-var import_crypto2 = __toESM(require("crypto"), 1);
-var import_bcryptjs2 = __toESM(require("bcryptjs"), 1);
+import { Router } from "express";
+import crypto2 from "crypto";
+import bcrypt2 from "bcryptjs";
 
 // src/db/index.ts
-var import_node_postgres = require("drizzle-orm/node-postgres");
-var import_pg = require("pg");
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 
 // src/db/schema.ts
 var schema_exports = {};
@@ -1453,167 +1426,167 @@ __export(schema_exports, {
   users: () => users,
   usersRelations: () => usersRelations
 });
-var import_drizzle_orm = require("drizzle-orm");
-var import_pg_core = require("drizzle-orm/pg-core");
-var users = (0, import_pg_core.pgTable)("users", {
-  id: (0, import_pg_core.serial)("id").primaryKey(),
-  uid: (0, import_pg_core.text)("uid").unique(),
+import { relations } from "drizzle-orm";
+import { integer, pgTable, serial, text, timestamp, boolean } from "drizzle-orm/pg-core";
+var users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  uid: text("uid").unique(),
   // Firebase Auth UID
-  name: (0, import_pg_core.text)("name").notNull(),
-  email: (0, import_pg_core.text)("email").notNull().unique(),
-  passwordHash: (0, import_pg_core.text)("password_hash"),
-  role: (0, import_pg_core.text)("role").notNull().default("staff"),
-  campusAccess: (0, import_pg_core.text)("campus_access").notNull().default("all"),
-  permissionLevel: (0, import_pg_core.text)("permission_level").notNull().default("selective"),
-  allowedModules: (0, import_pg_core.text)("allowed_modules").default("all"),
-  status: (0, import_pg_core.text)("status").notNull().default("active"),
-  phone: (0, import_pg_core.text)("phone"),
-  twoFactorEnabled: (0, import_pg_core.boolean)("two_factor_enabled").default(false),
-  lastLoginAt: (0, import_pg_core.timestamp)("last_login_at"),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow(),
-  updatedAt: (0, import_pg_core.timestamp)("updated_at").defaultNow()
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash"),
+  role: text("role").notNull().default("staff"),
+  campusAccess: text("campus_access").notNull().default("all"),
+  permissionLevel: text("permission_level").notNull().default("selective"),
+  allowedModules: text("allowed_modules").default("all"),
+  status: text("status").notNull().default("active"),
+  phone: text("phone"),
+  twoFactorEnabled: boolean("two_factor_enabled").default(false),
+  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
 });
-var systemSettings = (0, import_pg_core.pgTable)("system_settings", {
-  id: (0, import_pg_core.serial)("id").primaryKey(),
-  instituteName: (0, import_pg_core.text)("institute_name").notNull().default("DigiSkool-Institute of Digital Skills"),
-  instituteSubtitle: (0, import_pg_core.text)("institute_subtitle").default("Institute of Digital Skills"),
-  campuses: (0, import_pg_core.text)("campuses").default("Lahore & Okara"),
-  address: (0, import_pg_core.text)("address"),
-  phone: (0, import_pg_core.text)("phone"),
-  email: (0, import_pg_core.text)("email"),
-  website: (0, import_pg_core.text)("website"),
-  currency: (0, import_pg_core.text)("currency").default("PKR"),
-  currencySymbol: (0, import_pg_core.text)("currency_symbol").default("Rs."),
-  voucherPrefix: (0, import_pg_core.text)("voucher_prefix").default("DS-VCH-"),
-  receiptPrefix: (0, import_pg_core.text)("receipt_prefix").default("DS-RCT-"),
-  expensePrefix: (0, import_pg_core.text)("expense_prefix").default("DS-EXP-"),
-  admissionPrefix: (0, import_pg_core.text)("admission_prefix").default("DS-ADM-"),
-  alertEmail: (0, import_pg_core.text)("alert_email").default("jameshut629@gmail.com"),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow(),
-  updatedAt: (0, import_pg_core.timestamp)("updated_at").defaultNow()
+var systemSettings = pgTable("system_settings", {
+  id: serial("id").primaryKey(),
+  instituteName: text("institute_name").notNull().default("DigiSkool-Institute of Digital Skills"),
+  instituteSubtitle: text("institute_subtitle").default("Institute of Digital Skills"),
+  campuses: text("campuses").default("Lahore & Okara"),
+  address: text("address"),
+  phone: text("phone"),
+  email: text("email"),
+  website: text("website"),
+  currency: text("currency").default("PKR"),
+  currencySymbol: text("currency_symbol").default("Rs."),
+  voucherPrefix: text("voucher_prefix").default("DS-VCH-"),
+  receiptPrefix: text("receipt_prefix").default("DS-RCT-"),
+  expensePrefix: text("expense_prefix").default("DS-EXP-"),
+  admissionPrefix: text("admission_prefix").default("DS-ADM-"),
+  alertEmail: text("alert_email").default("jameshut629@gmail.com"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
 });
-var campuses = (0, import_pg_core.pgTable)("campuses", {
-  id: (0, import_pg_core.serial)("id").primaryKey(),
-  code: (0, import_pg_core.text)("code").notNull().unique(),
-  name: (0, import_pg_core.text)("name").notNull(),
-  city: (0, import_pg_core.text)("city").notNull(),
-  address: (0, import_pg_core.text)("address"),
-  phone: (0, import_pg_core.text)("phone"),
-  email: (0, import_pg_core.text)("email"),
-  status: (0, import_pg_core.text)("status").default("active"),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow()
+var campuses = pgTable("campuses", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  city: text("city").notNull(),
+  address: text("address"),
+  phone: text("phone"),
+  email: text("email"),
+  status: text("status").default("active"),
+  createdAt: timestamp("created_at").defaultNow()
 });
-var courses = (0, import_pg_core.pgTable)("courses", {
-  id: (0, import_pg_core.serial)("id").primaryKey(),
-  code: (0, import_pg_core.text)("code").notNull().unique(),
-  title: (0, import_pg_core.text)("title").notNull(),
-  category: (0, import_pg_core.text)("category").default("Technology"),
-  durationMonths: (0, import_pg_core.integer)("duration_months").default(3),
-  totalFee: (0, import_pg_core.integer)("total_fee").notNull(),
-  admissionFee: (0, import_pg_core.integer)("admission_fee").default(0),
-  syllabus: (0, import_pg_core.text)("syllabus"),
-  status: (0, import_pg_core.text)("status").default("active"),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow()
+var courses = pgTable("courses", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  title: text("title").notNull(),
+  category: text("category").default("Technology"),
+  durationMonths: integer("duration_months").default(3),
+  totalFee: integer("total_fee").notNull(),
+  admissionFee: integer("admission_fee").default(0),
+  syllabus: text("syllabus"),
+  status: text("status").default("active"),
+  createdAt: timestamp("created_at").defaultNow()
 });
-var batches = (0, import_pg_core.pgTable)("batches", {
-  id: (0, import_pg_core.serial)("id").primaryKey(),
-  batchCode: (0, import_pg_core.text)("batch_code").notNull().unique(),
-  courseId: (0, import_pg_core.integer)("course_id").references(() => courses.id),
-  campusId: (0, import_pg_core.integer)("campus_id").references(() => campuses.id),
-  startDate: (0, import_pg_core.text)("start_date"),
-  endDate: (0, import_pg_core.text)("end_date"),
-  timing: (0, import_pg_core.text)("timing"),
-  maxStudents: (0, import_pg_core.integer)("max_students").default(30),
-  status: (0, import_pg_core.text)("status").default("active"),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow()
+var batches = pgTable("batches", {
+  id: serial("id").primaryKey(),
+  batchCode: text("batch_code").notNull().unique(),
+  courseId: integer("course_id").references(() => courses.id),
+  campusId: integer("campus_id").references(() => campuses.id),
+  startDate: text("start_date"),
+  endDate: text("end_date"),
+  timing: text("timing"),
+  maxStudents: integer("max_students").default(30),
+  status: text("status").default("active"),
+  createdAt: timestamp("created_at").defaultNow()
 });
-var students = (0, import_pg_core.pgTable)("students", {
-  id: (0, import_pg_core.serial)("id").primaryKey(),
-  regNo: (0, import_pg_core.text)("reg_no").notNull().unique(),
-  name: (0, import_pg_core.text)("name").notNull(),
-  fatherName: (0, import_pg_core.text)("father_name"),
-  cnic: (0, import_pg_core.text)("cnic"),
-  phone: (0, import_pg_core.text)("phone").notNull(),
-  email: (0, import_pg_core.text)("email"),
-  guardianPhone: (0, import_pg_core.text)("guardian_phone"),
-  address: (0, import_pg_core.text)("address"),
-  city: (0, import_pg_core.text)("city"),
-  campusId: (0, import_pg_core.integer)("campus_id").references(() => campuses.id),
-  currentCourseId: (0, import_pg_core.integer)("current_course_id").references(() => courses.id),
-  status: (0, import_pg_core.text)("status").default("active"),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow()
+var students = pgTable("students", {
+  id: serial("id").primaryKey(),
+  regNo: text("reg_no").notNull().unique(),
+  name: text("name").notNull(),
+  fatherName: text("father_name"),
+  cnic: text("cnic"),
+  phone: text("phone").notNull(),
+  email: text("email"),
+  guardianPhone: text("guardian_phone"),
+  address: text("address"),
+  city: text("city"),
+  campusId: integer("campus_id").references(() => campuses.id),
+  currentCourseId: integer("current_course_id").references(() => courses.id),
+  status: text("status").default("active"),
+  createdAt: timestamp("created_at").defaultNow()
 });
-var admissions = (0, import_pg_core.pgTable)("admissions", {
-  id: (0, import_pg_core.serial)("id").primaryKey(),
-  admissionNo: (0, import_pg_core.text)("admission_no").notNull().unique(),
-  studentId: (0, import_pg_core.integer)("student_id").references(() => students.id),
-  courseId: (0, import_pg_core.integer)("course_id").references(() => courses.id),
-  campusId: (0, import_pg_core.integer)("campus_id").references(() => campuses.id),
-  batchId: (0, import_pg_core.integer)("batch_id").references(() => batches.id),
-  admissionDate: (0, import_pg_core.text)("admission_date").notNull(),
-  agreedFee: (0, import_pg_core.integer)("agreed_fee").notNull(),
-  discountAmount: (0, import_pg_core.integer)("discount_amount").default(0),
-  paymentPlan: (0, import_pg_core.text)("payment_plan").default("installments"),
-  status: (0, import_pg_core.text)("status").default("admitted"),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow()
+var admissions = pgTable("admissions", {
+  id: serial("id").primaryKey(),
+  admissionNo: text("admission_no").notNull().unique(),
+  studentId: integer("student_id").references(() => students.id),
+  courseId: integer("course_id").references(() => courses.id),
+  campusId: integer("campus_id").references(() => campuses.id),
+  batchId: integer("batch_id").references(() => batches.id),
+  admissionDate: text("admission_date").notNull(),
+  agreedFee: integer("agreed_fee").notNull(),
+  discountAmount: integer("discount_amount").default(0),
+  paymentPlan: text("payment_plan").default("installments"),
+  status: text("status").default("admitted"),
+  createdAt: timestamp("created_at").defaultNow()
 });
-var feeVouchers = (0, import_pg_core.pgTable)("fee_vouchers", {
-  id: (0, import_pg_core.serial)("id").primaryKey(),
-  voucherNo: (0, import_pg_core.text)("voucher_no").notNull().unique(),
-  studentId: (0, import_pg_core.integer)("student_id").references(() => students.id),
-  admissionId: (0, import_pg_core.integer)("admission_id").references(() => admissions.id),
-  courseId: (0, import_pg_core.integer)("course_id").references(() => courses.id),
-  campusId: (0, import_pg_core.integer)("campus_id").references(() => campuses.id),
-  amount: (0, import_pg_core.integer)("amount").notNull(),
-  dueDate: (0, import_pg_core.text)("due_date").notNull(),
-  installmentNo: (0, import_pg_core.integer)("installment_no").default(1),
-  status: (0, import_pg_core.text)("status").default("unpaid"),
+var feeVouchers = pgTable("fee_vouchers", {
+  id: serial("id").primaryKey(),
+  voucherNo: text("voucher_no").notNull().unique(),
+  studentId: integer("student_id").references(() => students.id),
+  admissionId: integer("admission_id").references(() => admissions.id),
+  courseId: integer("course_id").references(() => courses.id),
+  campusId: integer("campus_id").references(() => campuses.id),
+  amount: integer("amount").notNull(),
+  dueDate: text("due_date").notNull(),
+  installmentNo: integer("installment_no").default(1),
+  status: text("status").default("unpaid"),
   // unpaid, paid, partial, cancelled
-  paidAmount: (0, import_pg_core.integer)("paid_amount").default(0),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow()
+  paidAmount: integer("paid_amount").default(0),
+  createdAt: timestamp("created_at").defaultNow()
 });
-var payments = (0, import_pg_core.pgTable)("payments", {
-  id: (0, import_pg_core.serial)("id").primaryKey(),
-  receiptNo: (0, import_pg_core.text)("receipt_no").notNull().unique(),
-  voucherId: (0, import_pg_core.integer)("voucher_id").references(() => feeVouchers.id),
-  studentId: (0, import_pg_core.integer)("student_id").references(() => students.id),
-  campusId: (0, import_pg_core.integer)("campus_id").references(() => campuses.id),
-  amount: (0, import_pg_core.integer)("amount").notNull(),
-  paymentDate: (0, import_pg_core.text)("payment_date").notNull(),
-  paymentMethod: (0, import_pg_core.text)("payment_method").default("cash"),
-  referenceNo: (0, import_pg_core.text)("reference_no"),
-  receivedBy: (0, import_pg_core.text)("received_by"),
-  notes: (0, import_pg_core.text)("notes"),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow()
+var payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  receiptNo: text("receipt_no").notNull().unique(),
+  voucherId: integer("voucher_id").references(() => feeVouchers.id),
+  studentId: integer("student_id").references(() => students.id),
+  campusId: integer("campus_id").references(() => campuses.id),
+  amount: integer("amount").notNull(),
+  paymentDate: text("payment_date").notNull(),
+  paymentMethod: text("payment_method").default("cash"),
+  referenceNo: text("reference_no"),
+  receivedBy: text("received_by"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow()
 });
-var expenses = (0, import_pg_core.pgTable)("expenses", {
-  id: (0, import_pg_core.serial)("id").primaryKey(),
-  expenseNo: (0, import_pg_core.text)("expense_no").notNull().unique(),
-  campusId: (0, import_pg_core.integer)("campus_id").references(() => campuses.id),
-  category: (0, import_pg_core.text)("category").notNull(),
-  title: (0, import_pg_core.text)("title").notNull(),
-  amount: (0, import_pg_core.integer)("amount").notNull(),
-  expenseDate: (0, import_pg_core.text)("expense_date").notNull(),
-  paidTo: (0, import_pg_core.text)("paid_to"),
-  paymentMethod: (0, import_pg_core.text)("payment_method").default("cash"),
-  approvedBy: (0, import_pg_core.text)("approved_by"),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow()
+var expenses = pgTable("expenses", {
+  id: serial("id").primaryKey(),
+  expenseNo: text("expense_no").notNull().unique(),
+  campusId: integer("campus_id").references(() => campuses.id),
+  category: text("category").notNull(),
+  title: text("title").notNull(),
+  amount: integer("amount").notNull(),
+  expenseDate: text("expense_date").notNull(),
+  paidTo: text("paid_to"),
+  paymentMethod: text("payment_method").default("cash"),
+  approvedBy: text("approved_by"),
+  createdAt: timestamp("created_at").defaultNow()
 });
-var activityLogs = (0, import_pg_core.pgTable)("activity_logs", {
-  id: (0, import_pg_core.serial)("id").primaryKey(),
-  userId: (0, import_pg_core.integer)("user_id"),
-  userEmail: (0, import_pg_core.text)("user_email"),
-  action: (0, import_pg_core.text)("action").notNull(),
-  entityType: (0, import_pg_core.text)("entity_type"),
-  entityId: (0, import_pg_core.text)("entity_id"),
-  details: (0, import_pg_core.text)("details"),
-  ipAddress: (0, import_pg_core.text)("ip_address"),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow()
+var activityLogs = pgTable("activity_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),
+  userEmail: text("user_email"),
+  action: text("action").notNull(),
+  entityType: text("entity_type"),
+  entityId: text("entity_id"),
+  details: text("details"),
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at").defaultNow()
 });
-var usersRelations = (0, import_drizzle_orm.relations)(users, ({ many }) => ({
+var usersRelations = relations(users, ({ many }) => ({
   activityLogs: many(activityLogs)
 }));
-var studentsRelations = (0, import_drizzle_orm.relations)(students, ({ one, many }) => ({
+var studentsRelations = relations(students, ({ one, many }) => ({
   campus: one(campuses, {
     fields: [students.campusId],
     references: [campuses.id]
@@ -1626,7 +1599,7 @@ var studentsRelations = (0, import_drizzle_orm.relations)(students, ({ one, many
   vouchers: many(feeVouchers),
   payments: many(payments)
 }));
-var feeVouchersRelations = (0, import_drizzle_orm.relations)(feeVouchers, ({ one, many }) => ({
+var feeVouchersRelations = relations(feeVouchers, ({ one, many }) => ({
   student: one(students, {
     fields: [feeVouchers.studentId],
     references: [students.id]
@@ -1637,7 +1610,7 @@ var feeVouchersRelations = (0, import_drizzle_orm.relations)(feeVouchers, ({ one
 // src/db/index.ts
 var createPool = () => {
   if (!global._postgresPool) {
-    global._postgresPool = new import_pg.Pool({
+    global._postgresPool = new Pool({
       host: process.env.SQL_HOST,
       user: process.env.SQL_USER,
       password: process.env.SQL_PASSWORD,
@@ -1652,22 +1625,22 @@ var createPool = () => {
   return global._postgresPool;
 };
 var pool = createPool();
-var db = (0, import_node_postgres.drizzle)(pool, { schema: schema_exports });
+var db = drizzle(pool, { schema: schema_exports });
 
 // src/db/users.ts
-var import_drizzle_orm2 = require("drizzle-orm");
+import { eq } from "drizzle-orm";
 async function getOrCreateUser(uid, email, name) {
   try {
     const cleanEmail = email.toLowerCase().trim();
     const displayName = name || cleanEmail.split("@")[0];
-    const existing = await db.select().from(users).where((0, import_drizzle_orm2.eq)(users.email, cleanEmail)).limit(1);
+    const existing = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
     if (existing.length > 0) {
       const updated = await db.update(users).set({
         uid,
         name: displayName,
         lastLoginAt: /* @__PURE__ */ new Date(),
         updatedAt: /* @__PURE__ */ new Date()
-      }).where((0, import_drizzle_orm2.eq)(users.email, cleanEmail)).returning();
+      }).where(eq(users.email, cleanEmail)).returning();
       return updated[0];
     }
     const result = await db.insert(users).values({
@@ -1685,7 +1658,7 @@ async function getOrCreateUser(uid, email, name) {
 async function syncUserToCloudSql(userData) {
   try {
     const cleanEmail = userData.email.toLowerCase().trim();
-    const existing = await db.select().from(users).where((0, import_drizzle_orm2.eq)(users.email, cleanEmail)).limit(1);
+    const existing = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
     if (existing.length > 0) {
       await db.update(users).set({
         name: userData.name || existing[0].name,
@@ -1696,7 +1669,7 @@ async function syncUserToCloudSql(userData) {
         phone: userData.phone !== void 0 ? userData.phone : existing[0].phone,
         status: userData.status || existing[0].status,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where((0, import_drizzle_orm2.eq)(users.email, cleanEmail));
+      }).where(eq(users.email, cleanEmail));
     } else {
       await db.insert(users).values({
         email: cleanEmail,
@@ -1715,20 +1688,20 @@ async function syncUserToCloudSql(userData) {
 }
 
 // server/totp.ts
-var import_otplib = require("otplib");
-var import_qrcode = __toESM(require("qrcode"), 1);
+import { generateSecret, generateURI, verifySync } from "otplib";
+import QRCode from "qrcode";
 function generateTwoFactorSecret() {
-  return (0, import_otplib.generateSecret)();
+  return generateSecret();
 }
 function generateOtpAuthUrl(email, secret) {
-  return (0, import_otplib.generateURI)({
+  return generateURI({
     label: email,
     issuer: "DigiSkool-IMS",
     secret
   });
 }
 async function generateQrCodeDataUrl(otpauthUrl) {
-  return import_qrcode.default.toDataURL(otpauthUrl, {
+  return QRCode.toDataURL(otpauthUrl, {
     width: 250,
     margin: 2,
     color: {
@@ -1741,7 +1714,7 @@ function verifyTwoFactorToken(token, secret) {
   if (!token || !secret) return false;
   const cleanToken = token.trim().replace(/\s+/g, "");
   try {
-    const result = (0, import_otplib.verifySync)({
+    const result = verifySync({
       token: cleanToken,
       secret,
       epochTolerance: 30
@@ -1755,9 +1728,9 @@ function verifyTwoFactorToken(token, secret) {
 }
 
 // server/auth.ts
-var import_crypto = __toESM(require("crypto"), 1);
+import crypto from "crypto";
 function generateToken() {
-  return import_crypto.default.randomBytes(32).toString("hex");
+  return crypto.randomBytes(32).toString("hex");
 }
 function getClientInfo(req) {
   const forwarded = req.headers["x-forwarded-for"];
@@ -1828,7 +1801,7 @@ Designed & Developed & Managed by GenZ Lab
   }
   console.log(`[Security Alert] Login notification dispatched to ${user.email} and ${mainAdminEmail} at ${timeStr}`);
 }
-function logAudit(user, action, module2, recordId, details, req, oldValues, newValues) {
+function logAudit(user, action, module, recordId, details, req, oldValues, newValues) {
   const ip = req ? getClientInfo(req).ip : "127.0.0.1";
   const userId = user?.id || 0;
   const userName = user?.name || "System";
@@ -1841,7 +1814,7 @@ function logAudit(user, action, module2, recordId, details, req, oldValues, newV
     userName,
     userRole,
     action,
-    module2,
+    module,
     recordId,
     details,
     oldValues ? JSON.stringify(oldValues) : null,
@@ -1923,7 +1896,7 @@ function requireOwner(req, res, next) {
 }
 
 // server/routes.ts
-var apiRouter = (0, import_express.Router)();
+var apiRouter = Router();
 apiRouter.post("/auth/login", async (req, res) => {
   try {
     const { email, password, rememberMe } = req.body;
@@ -1935,7 +1908,7 @@ apiRouter.post("/auth/login", async (req, res) => {
     const cleanPassword = String(password).trim();
     let user = queryOne("SELECT * FROM users WHERE LOWER(email) = ?;", [cleanEmail]);
     if (!user) {
-      const defaultHash = import_bcryptjs2.default.hashSync("DigiSkool@2025", 10);
+      const defaultHash = bcrypt2.hashSync("DigiSkool@2025", 10);
       if (cleanEmail === "adnanmrao@gmail.com" || cleanEmail.includes("adnanmrao")) {
         runQuery(`
           INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, phone, status)
@@ -1986,7 +1959,7 @@ apiRouter.post("/auth/login", async (req, res) => {
     }
     let passwordMatch = false;
     try {
-      passwordMatch = import_bcryptjs2.default.compareSync(cleanPassword, user.password_hash);
+      passwordMatch = bcrypt2.compareSync(cleanPassword, user.password_hash);
     } catch {
       passwordMatch = false;
     }
@@ -2064,7 +2037,7 @@ apiRouter.post("/auth/firebase-google", async (req, res) => {
     if (!user) {
       const isOwnerEmail = cleanEmail === "jameshut629@gmail.com" || cleanEmail === "adnanmrao@gmail.com";
       if (isOwnerEmail) {
-        const defaultHash = import_bcryptjs2.default.hashSync(import_crypto2.default.randomBytes(16).toString("hex"), 10);
+        const defaultHash = bcrypt2.hashSync(crypto2.randomBytes(16).toString("hex"), 10);
         runQuery(`
           INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, status)
           VALUES (?, ?, ?, 'main_admin', 'full', 'all', 'active');
@@ -2293,7 +2266,7 @@ apiRouter.post("/auth/2fa/disable", authenticate, async (req, res) => {
     );
     if (!user) return res.status(404).json({ error: "User not found" });
     if (current_password) {
-      const match = import_bcryptjs2.default.compareSync(current_password, user.password_hash);
+      const match = bcrypt2.compareSync(current_password, user.password_hash);
       if (!match) return res.status(400).json({ error: "Incorrect password." });
     } else if (code && user.two_factor_secret) {
       const isValid = verifyTwoFactorToken(code, user.two_factor_secret);
@@ -2397,11 +2370,11 @@ apiRouter.post("/auth/change-password", authenticate, async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User account not found." });
     }
-    const matches = import_bcryptjs2.default.compareSync(current_password, user.password_hash);
+    const matches = bcrypt2.compareSync(current_password, user.password_hash);
     if (!matches) {
       return res.status(400).json({ error: "Current password is incorrect." });
     }
-    const newHash = import_bcryptjs2.default.hashSync(new_password, 10);
+    const newHash = bcrypt2.hashSync(new_password, 10);
     runQuery("UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;", [newHash, user.id]);
     logAudit(req.user, "UPDATE", "security", String(user.id), `Password changed successfully for ${user.email}`, req);
     const clientInfo = getClientInfo(req);
@@ -5105,12 +5078,12 @@ apiRouter.get("/reports/executive-meeting", authenticate, requireRoles("owner", 
 });
 apiRouter.get("/audit-logs", authenticate, requireRoles("owner", "admin"), (req, res) => {
   try {
-    const { module: module2, action, user_id } = req.query;
+    const { module, action, user_id } = req.query;
     let sql = "SELECT * FROM audit_logs WHERE 1=1";
     const params = [];
-    if (module2) {
+    if (module) {
       sql += " AND module = ?";
-      params.push(module2);
+      params.push(module);
     }
     if (action) {
       sql += " AND action = ?";
@@ -5129,12 +5102,12 @@ apiRouter.get("/audit-logs", authenticate, requireRoles("owner", "admin"), (req,
 });
 apiRouter.get("/security/audit-logs", authenticate, requireRoles("owner", "admin"), (req, res) => {
   try {
-    const { module: module2, action, user_id } = req.query;
+    const { module, action, user_id } = req.query;
     let sql = "SELECT * FROM audit_logs WHERE 1=1";
     const params = [];
-    if (module2) {
+    if (module) {
       sql += " AND module = ?";
-      params.push(module2);
+      params.push(module);
     }
     if (action) {
       sql += " AND action = ?";
@@ -5340,7 +5313,7 @@ apiRouter.post("/users", authenticate, requireRoles("owner", "main_admin", "admi
     const finalPermission = permission_level || (role === "main_admin" || role === "owner" ? "full" : "limited");
     const finalCampus = role === "main_admin" || role === "owner" || role === "admin_hr" ? "all" : campus_access || "all";
     const finalModules = allowed_modules ? Array.isArray(allowed_modules) ? allowed_modules.join(",") : String(allowed_modules) : "all";
-    const passwordHash = import_bcryptjs2.default.hashSync(password, 10);
+    const passwordHash = bcrypt2.hashSync(password, 10);
     const result = runQuery(`
       INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, allowed_modules, phone, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active');
@@ -5378,7 +5351,7 @@ apiRouter.post("/security/users", authenticate, requireRoles("owner", "main_admi
     const finalPermission = permission_level || (role === "main_admin" || role === "owner" ? "full" : "limited");
     const finalCampus = role === "main_admin" || role === "owner" || role === "admin_hr" ? "all" : campus_access || "all";
     const finalModules = allowed_modules ? Array.isArray(allowed_modules) ? allowed_modules.join(",") : String(allowed_modules) : "all";
-    const passwordHash = import_bcryptjs2.default.hashSync(password, 10);
+    const passwordHash = bcrypt2.hashSync(password, 10);
     const result = runQuery(`
       INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, allowed_modules, phone, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active');
@@ -5513,7 +5486,7 @@ apiRouter.post("/users/:id/reset-password", authenticate, requireOwner, (req, re
     if (!new_password || new_password.length < 6) {
       return res.status(400).json({ error: "New password must be at least 6 characters long." });
     }
-    const hash = import_bcryptjs2.default.hashSync(new_password, 10);
+    const hash = bcrypt2.hashSync(new_password, 10);
     runQuery("UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;", [hash, id]);
     runQuery("DELETE FROM sessions WHERE user_id = ?;", [id]);
     logAudit(req.user, "UPDATE", "users", id, "Reset user password and terminated all active sessions", req);
@@ -5524,33 +5497,33 @@ apiRouter.post("/users/:id/reset-password", authenticate, requireOwner, (req, re
 });
 apiRouter.post("/admin/permanent-delete", authenticate, requireOwner, (req, res) => {
   try {
-    const { module: module2, recordId, confirmationPhrase, reason, password } = req.body;
-    if (!module2 || !recordId || !confirmationPhrase || !reason) {
+    const { module, recordId, confirmationPhrase, reason, password } = req.body;
+    if (!module || !recordId || !confirmationPhrase || !reason) {
       return res.status(400).json({ error: "Module, record ID, confirmation phrase, and reason are required." });
     }
     if (password) {
       const ownerUser = queryOne("SELECT password_hash FROM users WHERE id = ?;", [req.user.id]);
-      if (ownerUser && !import_bcryptjs2.default.compareSync(password, ownerUser.password_hash)) {
+      if (ownerUser && !bcrypt2.compareSync(password, ownerUser.password_hash)) {
         return res.status(401).json({ error: "Invalid Owner password verification." });
       }
     }
-    const expectedPhrase = `PERMANENT DELETE ${module2.toUpperCase()} ${recordId}`;
+    const expectedPhrase = `PERMANENT DELETE ${module.toUpperCase()} ${recordId}`;
     if (confirmationPhrase.trim().toUpperCase() !== expectedPhrase) {
       return res.status(400).json({
         error: `Confirmation phrase mismatch. You must type exactly: "${expectedPhrase}"`
       });
     }
     let deleted = false;
-    if (module2 === "students") {
+    if (module === "students") {
       runQuery("DELETE FROM students WHERE id = ?;", [recordId]);
       deleted = true;
-    } else if (module2 === "courses") {
+    } else if (module === "courses") {
       runQuery("DELETE FROM courses WHERE id = ?;", [recordId]);
       deleted = true;
-    } else if (module2 === "batches") {
+    } else if (module === "batches") {
       runQuery("DELETE FROM batches WHERE id = ?;", [recordId]);
       deleted = true;
-    } else if (module2 === "users") {
+    } else if (module === "users") {
       const targetUser = queryOne("SELECT role FROM users WHERE id = ?;", [recordId]);
       if (targetUser?.role === "owner") {
         const ownersCount = queryOne('SELECT COUNT(*) as c FROM users WHERE role = "owner";').c;
@@ -5562,13 +5535,13 @@ apiRouter.post("/admin/permanent-delete", authenticate, requireOwner, (req, res)
       deleted = true;
     } else {
       return res.status(400).json({
-        error: `Permanent deletion is not supported for module "${module2}". For financial data (vouchers, payments, expenses), you must use void/reversal.`
+        error: `Permanent deletion is not supported for module "${module}". For financial data (vouchers, payments, expenses), you must use void/reversal.`
       });
     }
-    logAudit(req.user, "PERMANENT_DELETE", module2, String(recordId), `OWNER PERMANENT DELETE: ${reason}`, req);
+    logAudit(req.user, "PERMANENT_DELETE", module, String(recordId), `OWNER PERMANENT DELETE: ${reason}`, req);
     res.json({
       success: true,
-      message: `Record ${recordId} from ${module2} permanently deleted. Event recorded in audit log.`
+      message: `Record ${recordId} from ${module} permanently deleted. Event recorded in audit log.`
     });
   } catch (err) {
     res.status(500).json({ error: "Permanent deletion failed: " + err.message });
@@ -6312,18 +6285,18 @@ apiRouter.post("/staff/leaves", authenticate, (req, res) => {
 });
 apiRouter.post("/admin/delete-requests", authenticate, (req, res) => {
   try {
-    const { module: module2, record_id, record_name, reason } = req.body;
-    if (!module2 || !record_id || !record_name || !reason) {
+    const { module, record_id, record_name, reason } = req.body;
+    if (!module || !record_id || !record_name || !reason) {
       return res.status(400).json({ error: "Module, record ID, record name, and reason are required." });
     }
     const ins = runQuery(`
       INSERT INTO delete_requests (user_id, user_name, user_role, module, record_id, record_name, reason, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending');
-    `, [req.user?.id || 0, req.user?.name || "Staff User", req.user?.role || "staff", module2, String(record_id), record_name, reason]);
+    `, [req.user?.id || 0, req.user?.name || "Staff User", req.user?.role || "staff", module, String(record_id), record_name, reason]);
     runQuery(`
       INSERT INTO notifications (title, message, type, related_module, related_id)
       VALUES ('Staff Deletion Request', ?, 'warning', 'staff', ?);
-    `, [`${req.user?.name || "A user"} requested deletion of ${module2}: ${record_name}. Reason: ${reason}`, String(record_id)]);
+    `, [`${req.user?.name || "A user"} requested deletion of ${module}: ${record_name}. Reason: ${reason}`, String(record_id)]);
     res.status(201).json({ id: ins.lastInsertRowid, message: "Deletion request forwarded to Main Admin for authorization." });
   } catch (err) {
     res.status(500).json({ error: "Failed to submit deletion request: " + err.message });
@@ -6557,9 +6530,9 @@ apiRouter.post("/staff/payroll/pay", authenticate, requireRoles("owner", "admin"
 
 // api/serverless.ts
 process.env.TZ = "Asia/Karachi";
-var app = (0, import_express2.default)();
-app.use(import_express2.default.json({ limit: "10mb" }));
-app.use(import_express2.default.urlencoded({ extended: true }));
+var app = express();
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 app.get(["/api/health", "/health"], (req, res) => {
   res.json({
     status: "ok",
@@ -6582,3 +6555,6 @@ app.use(async (req, res, next) => {
 app.use("/api", apiRouter);
 app.use("/", apiRouter);
 var serverless_default = app;
+export {
+  serverless_default as default
+};
