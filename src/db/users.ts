@@ -4,6 +4,9 @@ import { users } from './schema.ts';
 import { eq } from 'drizzle-orm';
 
 export async function getOrCreateUser(uid: string, email: string, name?: string) {
+  if (!process.env.SQL_HOST) {
+    return null;
+  }
   try {
     const cleanEmail = email.toLowerCase().trim();
     const displayName = name || cleanEmail.split('@')[0];
@@ -53,6 +56,9 @@ export async function syncUserToCloudSql(userData: {
   phone?: string;
   status?: string;
 }) {
+  if (!process.env.SQL_HOST) {
+    return;
+  }
   try {
     const cleanEmail = userData.email.toLowerCase().trim();
     const existing = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);

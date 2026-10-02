@@ -18,7 +18,7 @@ app.get(['/api/health', '/health'], (req: Request, res: Response) => {
   });
 });
 
-// Lazy initialize database
+// Database initialization middleware
 let dbReadyPromise: Promise<any> | null = null;
 app.use(async (req: Request, res: Response, next) => {
   try {
@@ -26,10 +26,14 @@ app.use(async (req: Request, res: Response, next) => {
       dbReadyPromise = getDb();
     }
     await dbReadyPromise;
-  } catch (err) {
+    next();
+  } catch (err: any) {
+    dbReadyPromise = null; // reset so next request can retry
     console.error('Database initialization error:', err);
+    return res.status(500).json({
+      error: 'Database initialization failed: ' + (err?.message || String(err))
+    });
   }
-  next();
 });
 
 // Mount routes on /api and root

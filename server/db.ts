@@ -2,6 +2,7 @@ import initSqlJs, { type Database } from 'sql.js';
 import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
+import { SQL_WASM_BASE64 } from './sqlWasmBase64.ts';
 
 let dbInstance: Database | null = null;
 let DATA_DIR = path.join(process.cwd(), 'data');
@@ -31,36 +32,15 @@ export async function getDb(): Promise<Database> {
 
   ensureDataDirectory();
 
-  let wasmBinary: Buffer | undefined;
-  const candidates = [
-    path.join(__dirname, 'sql-wasm.wasm'),
-    path.join(process.cwd(), 'server', 'sql-wasm.wasm'),
-    path.join(process.cwd(), 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm'),
-    path.join(__dirname, '../node_modules/sql.js/dist/sql-wasm.wasm')
-  ];
-  for (const candidate of candidates) {
-    try {
-      if (fs.existsSync(candidate)) {
-        wasmBinary = fs.readFileSync(candidate);
-        break;
-      }
-    } catch {
-      // Continue to next candidate
-    }
+  let wasmBinary: Buffer | Uint8Array;
+  try {
+    wasmBinary = Buffer.from(SQL_WASM_BASE64, 'base64');
+  } catch (err) {
+    console.warn('Failed to load embedded wasm binary, falling back to disk:', err);
+    wasmBinary = fs.readFileSync(path.join(process.cwd(), 'server', 'sql-wasm.wasm'));
   }
 
-  const SQL = await initSqlJs(
-    wasmBinary
-      ? { wasmBinary }
-      : {
-          locateFile: (file) => {
-            for (const candidate of candidates) {
-              if (fs.existsSync(candidate)) return candidate;
-            }
-            return file;
-          }
-        }
-  );
+  const SQL = await initSqlJs({ wasmBinary });
 
   if (fs.existsSync(DB_FILE)) {
     const fileBuffer = fs.readFileSync(DB_FILE);
