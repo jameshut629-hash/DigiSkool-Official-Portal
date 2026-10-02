@@ -1,0 +1,279 @@
+@import "tailwindcss";
+
+@theme {
+  --color-maroon-50: #fdf2f4;
+  --color-maroon-100: #fbe6eb;
+  --color-maroon-200: #f7ced8;
+  --color-maroon-300: #f0a7ba;
+  --color-maroon-400: #e57493;
+  --color-maroon-500: #d64771;
+  --color-maroon-600: #bf2656;
+  --color-maroon-700: #a01a45;
+  --color-maroon-800: #85173a;
+  --color-maroon-900: #6e1231;
+  --color-maroon-950: #420619;
+}
+
+/* Global Dark Theme Custom Styling */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #0b0f19;
+  color: #f1f5f9;
+}
+
+/* Seamless theme transition on major surfaces */
+html.dark .bg-slate-50 {
+  background-color: #0b0f19 !important;
+}
+
+html.dark .bg-white {
+  background-color: #111827 !important;
+  border-color: #1f2937 !important;
+  color: #f3f4f6 !important;
+}
+
+html.dark .bg-slate-100\/80,
+html.dark .bg-slate-100,
+html.dark .bg-slate-50\/80 {
+  background-color: #1a2234 !important;
+  border-color: #28334a !important;
+}
+
+html.dark .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+html.dark .text-slate-800 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-slate-700 {
+  color: #e2e8f0 !important;
+}
+
+html.dark .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+html.dark .border-slate-200,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-100 {
+  border-color: #1f2937 !important;
+}
+
+html.dark .border-slate-300 {
+  border-color: #374151 !important;
+}
+
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark select,
+html.dark textarea {
+  background-color: #111827 !important;
+  color: #f3f4f6 !important;
+  border-color: #374151 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+html.dark table thead {
+  background-color: #172033 !important;
+  color: #94a3b8 !important;
+}
+
+html.dark table tbody tr {
+  border-color: #1f2937 !important;
+}
+
+html.dark table tbody tr:hover {
+  background-color: #1a2333 !important;
+}
+
+/* Modal and dialog dark styling */
+html.dark .fixed.inset-0 .bg-white {
+  background-color: #111827 !important;
+  border-color: #1f2937 !important;
+  color: #f3f4f6 !important;
+}
+
+/* Ensure vouchers and admission sheets stay clean white when opened in modals / print */
+#printable-voucher,
+#printable-receipt,
+#printable-expense-voucher,
+#printable-meeting-report,
+#digiskool-admission-form-sheet,
+.print-preserve-white {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+#printable-voucher *,
+#printable-receipt *,
+#printable-expense-voucher *,
+#printable-meeting-report *,
+#digiskool-admission-form-sheet * {
+  color-scheme: light !important;
+}
+
+@media print {
+  @page {
+    margin: 6mm;
+    size: auto;
+  }
+  
+  html, body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .no-print, nav, aside, header, button, .app-sidebar, .app-header {
+    display: none !important;
+  }
+
+  /* Reset layout wrapper margins and paddings during print */
+  #root, #root > div, .lg\:pl-64 {
+    padding: 0 !important;
+    padding-left: 0 !important;
+    margin: 0 !important;
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* When ANY print modal is active, hide the main background dashboard content behind it */
+  body:has(#printable-voucher) #root > div > main,
+  body:has(#printable-receipt) #root > div > main,
+  body:has(#printable-expense-voucher) #root > div > main,
+  body:has(#printable-meeting-report) #root > div > main,
+  body:has(#digiskool-admission-form-sheet) #root > div > main,
+  body:has(.printable-target) #root > div > main {
+    display: none !important;
+  }
+
+  /* Flatten modal containers for clean printing without overlays or scrollbars */
+  .fixed.inset-0,
+  div[class*="fixed inset-0"] {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Flatten inner dialog cards */
+  div[class*="max-h-["],
+  div[class*="max-w-5xl"],
+  div[class*="max-w-4xl"],
+  div[class*="max-w-3xl"],
+  div[class*="max-w-2xl"] {
+    max-height: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+  }
+
+  /* When printing voucher, print the 2-part layout (Office + Student Copy) across page */
+  #printable-voucher {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    display: flex !important;
+    flex-direction: row !important;
+  }
+
+  #printable-receipt {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+
+  #printable-expense-voucher {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+
+  #printable-meeting-report {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+  }
+
+  #printable-simplified-document {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+  }
+
+  .page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  #digiskool-admission-form-sheet {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 6mm !important;
+    background: #ffffff !important;
+  }
+}
