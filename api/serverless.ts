@@ -27,7 +27,7 @@ app.use(async (req: Request, res: Response, next) => {
     }
     await dbReadyPromise;
   } catch (err) {
-    console.error('Database initialization error on serverless function:', err);
+    console.error('Database initialization error:', err);
   }
   next();
 });
@@ -36,7 +36,4 @@ app.use(async (req: Request, res: Response, next) => {
 app.use('/api', apiRouter);
 app.use('/', apiRouter);
 
-// Universal Vercel Serverless Handler
-export default function handler(req: any, res: any) {
-  return app(req, res);
-}
+export default app;
