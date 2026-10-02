@@ -1389,7 +1389,7 @@ function initSchemaAndSeed(db2) {
 // server/routes.ts
 import { Router } from "express";
 import crypto2 from "crypto";
-import bcrypt2 from "bcryptjs";
+import bcrypt3 from "bcryptjs";
 
 // src/db/index.ts
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -1722,7 +1722,45 @@ function verifyTwoFactorToken(token, secret) {
 
 // server/auth.ts
 import crypto from "crypto";
-function generateToken() {
+import bcrypt2 from "bcryptjs";
+var SESSION_SECRET = process.env.SESSION_SECRET || "digiskool_institute_portal_master_key_2026_pk";
+function signToken(user, expiryDays = 30) {
+  const expiresAt = Date.now() + expiryDays * 24 * 60 * 60 * 1e3;
+  const payload = {
+    id: user.id,
+    name: user.name,
+    email: user.email.toLowerCase().trim(),
+    role: user.role,
+    permission_level: user.permission_level || "full",
+    campus_access: user.campus_access || "all",
+    allowed_modules: user.allowed_modules || "all",
+    phone: user.phone || "",
+    exp: expiresAt
+  };
+  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = crypto.createHmac("sha256", SESSION_SECRET).update(payloadB64).digest("base64url");
+  return `dsk_${payloadB64}.${signature}`;
+}
+function verifySignedToken(token) {
+  if (!token || !token.startsWith("dsk_")) return null;
+  const raw = token.slice(4);
+  const parts = raw.split(".");
+  if (parts.length !== 2) return null;
+  const [payloadB64, signature] = parts;
+  const expectedSig = crypto.createHmac("sha256", SESSION_SECRET).update(payloadB64).digest("base64url");
+  if (signature !== expectedSig) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"));
+    if (Date.now() > payload.exp) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+function generateToken(user, expiryDays = 30) {
+  if (user && user.email) {
+    return signToken(user, expiryDays);
+  }
   return crypto.randomBytes(32).toString("hex");
 }
 function getClientInfo(req) {
@@ -1821,40 +1859,86 @@ function authenticate(req, res, next) {
     return res.status(401).json({ error: "Authentication required. Please log in." });
   }
   const token = authHeader.split(" ")[1];
-  const session = queryOne(`
-    SELECT s.token, s.user_id, s.expires_at, u.id, u.name, u.email, u.role, u.permission_level, u.campus_access, u.allowed_modules, u.phone, u.status, u.two_factor_enabled
-    FROM sessions s
-    JOIN users u ON s.user_id = u.id
-    WHERE s.token = ?;
-  `, [token]);
-  if (!session) {
-    return res.status(401).json({ error: "Session invalid or expired. Please log in again." });
-  }
-  if (new Date(session.expires_at) < /* @__PURE__ */ new Date()) {
-    runQuery("DELETE FROM sessions WHERE token = ?;", [token]);
-    return res.status(401).json({ error: "Session has expired. Please log in again." });
-  }
-  if (session.status === "disabled") {
-    return res.status(403).json({ error: "This user account has been disabled by institute administration." });
+  const tokenPayload = verifySignedToken(token);
+  if (tokenPayload) {
+    let dbUser = null;
+    try {
+      dbUser = queryOne("SELECT * FROM users WHERE LOWER(email) = ?;", [tokenPayload.email.toLowerCase()]);
+      if (!dbUser) {
+        const defaultHash = bcrypt2.hashSync("DigiSkool@2025", 10);
+        runQuery(`
+          INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, allowed_modules, phone, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active');
+        `, [
+          tokenPayload.name,
+          tokenPayload.email.toLowerCase(),
+          defaultHash,
+          tokenPayload.role,
+          tokenPayload.permission_level || "full",
+          tokenPayload.campus_access || "all",
+          tokenPayload.allowed_modules || "all",
+          tokenPayload.phone || ""
+        ]);
+        dbUser = queryOne("SELECT * FROM users WHERE LOWER(email) = ?;", [tokenPayload.email.toLowerCase()]);
+      }
+    } catch {
+    }
+    if (dbUser && dbUser.status === "disabled") {
+      return res.status(403).json({ error: "This user account has been disabled by institute administration." });
+    }
+    req.user = {
+      id: dbUser ? dbUser.id : tokenPayload.id,
+      name: dbUser ? dbUser.name : tokenPayload.name,
+      email: dbUser ? dbUser.email : tokenPayload.email,
+      role: dbUser ? dbUser.role : tokenPayload.role,
+      permission_level: dbUser?.permission_level || tokenPayload.permission_level || "full",
+      campus_access: dbUser?.campus_access || tokenPayload.campus_access || "all",
+      allowed_modules: dbUser?.allowed_modules || tokenPayload.allowed_modules || "all",
+      phone: dbUser?.phone || tokenPayload.phone || "",
+      status: dbUser ? dbUser.status : "active",
+      two_factor_enabled: Boolean(dbUser?.two_factor_enabled)
+    };
+    return next();
   }
   try {
-    runQuery("UPDATE users SET last_active_at = CURRENT_TIMESTAMP WHERE id = ?;", [session.id]);
-    runQuery("UPDATE sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = ?;", [token]);
-  } catch {
+    const session = queryOne(`
+      SELECT s.token, s.user_id, s.expires_at, u.id, u.name, u.email, u.role, u.permission_level, u.campus_access, u.allowed_modules, u.phone, u.status, u.two_factor_enabled
+      FROM sessions s
+      JOIN users u ON s.user_id = u.id
+      WHERE s.token = ?;
+    `, [token]);
+    if (!session) {
+      return res.status(401).json({ error: "Session invalid or expired. Please log in again." });
+    }
+    if (new Date(session.expires_at) < /* @__PURE__ */ new Date()) {
+      runQuery("DELETE FROM sessions WHERE token = ?;", [token]);
+      return res.status(401).json({ error: "Session has expired. Please log in again." });
+    }
+    if (session.status === "disabled") {
+      return res.status(403).json({ error: "This user account has been disabled by institute administration." });
+    }
+    try {
+      runQuery("UPDATE users SET last_active_at = CURRENT_TIMESTAMP WHERE id = ?;", [session.id]);
+      runQuery("UPDATE sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = ?;", [token]);
+    } catch {
+    }
+    req.user = {
+      id: session.id,
+      name: session.name,
+      email: session.email,
+      role: session.role,
+      permission_level: session.permission_level || "full",
+      campus_access: session.campus_access || "all",
+      allowed_modules: session.allowed_modules || "all",
+      phone: session.phone,
+      status: session.status,
+      two_factor_enabled: Boolean(session.two_factor_enabled)
+    };
+    next();
+  } catch (err) {
+    console.error("Session lookup error:", err);
+    return res.status(401).json({ error: "Session invalid or expired. Please log in again." });
   }
-  req.user = {
-    id: session.id,
-    name: session.name,
-    email: session.email,
-    role: session.role,
-    permission_level: session.permission_level || "full",
-    campus_access: session.campus_access || "all",
-    allowed_modules: session.allowed_modules || "all",
-    phone: session.phone,
-    status: session.status,
-    two_factor_enabled: Boolean(session.two_factor_enabled)
-  };
-  next();
 }
 function requireRoles(...allowedRoles) {
   return (req, res, next) => {
@@ -1901,7 +1985,7 @@ apiRouter.post("/auth/login", async (req, res) => {
     const cleanPassword = String(password).trim();
     let user = queryOne("SELECT * FROM users WHERE LOWER(email) = ?;", [cleanEmail]);
     if (!user) {
-      const defaultHash = bcrypt2.hashSync("DigiSkool@2025", 10);
+      const defaultHash = bcrypt3.hashSync("DigiSkool@2025", 10);
       if (cleanEmail === "adnanmrao@gmail.com" || cleanEmail.includes("adnanmrao")) {
         runQuery(`
           INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, phone, status)
@@ -1952,7 +2036,7 @@ apiRouter.post("/auth/login", async (req, res) => {
     }
     let passwordMatch = false;
     try {
-      passwordMatch = bcrypt2.compareSync(cleanPassword, user.password_hash);
+      passwordMatch = bcrypt3.compareSync(cleanPassword, user.password_hash);
     } catch {
       passwordMatch = false;
     }
@@ -1980,20 +2064,6 @@ apiRouter.post("/auth/login", async (req, res) => {
         message: "Two-Factor Authentication (2FA) verification code required."
       });
     }
-    const token = generateToken();
-    const expiryDays = rememberMe ? 30 : 2;
-    const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1e3).toISOString();
-    runQuery(`
-      INSERT INTO sessions (token, user_id, ip, user_agent, device, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?);
-    `, [token, user.id, clientInfo.ip, clientInfo.userAgent, clientInfo.device, expiresAt]);
-    runQuery(`
-      UPDATE users SET last_login_at = CURRENT_TIMESTAMP, last_login_ip = ?, last_active_at = CURRENT_TIMESTAMP WHERE id = ?;
-    `, [clientInfo.ip, user.id]);
-    runQuery(`
-      INSERT INTO login_logs (user_id, user_email, user_name, role, ip, device, browser, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'success');
-    `, [user.id, user.email, user.name, user.role, clientInfo.ip, clientInfo.device, clientInfo.browser]);
     const userPayload = {
       id: user.id,
       name: user.name,
@@ -2006,8 +2076,31 @@ apiRouter.post("/auth/login", async (req, res) => {
       status: user.status,
       two_factor_enabled: Boolean(user.two_factor_enabled)
     };
+    const expiryDays = rememberMe ? 30 : 2;
+    const token = generateToken(userPayload, expiryDays);
+    const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1e3).toISOString();
+    try {
+      runQuery(`
+        INSERT INTO sessions (token, user_id, ip, user_agent, device, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?);
+      `, [token, user.id, clientInfo.ip, clientInfo.userAgent, clientInfo.device, expiresAt]);
+    } catch {
+    }
+    try {
+      runQuery(`
+        UPDATE users SET last_login_at = CURRENT_TIMESTAMP, last_login_ip = ?, last_active_at = CURRENT_TIMESTAMP WHERE id = ?;
+      `, [clientInfo.ip, user.id]);
+      runQuery(`
+        INSERT INTO login_logs (user_id, user_email, user_name, role, ip, device, browser, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'success');
+      `, [user.id, user.email, user.name, user.role, clientInfo.ip, clientInfo.device, clientInfo.browser]);
+    } catch {
+    }
     sendLoginAlertEmail(userPayload, clientInfo);
-    logAudit(userPayload, "LOGIN", "auth", String(user.id), `Logged in from ${clientInfo.ip} (${clientInfo.device})`, req);
+    try {
+      logAudit(userPayload, "LOGIN", "auth", String(user.id), `Logged in from ${clientInfo.ip} (${clientInfo.device})`, req);
+    } catch {
+    }
     res.json({
       token,
       user: userPayload,
@@ -2030,7 +2123,7 @@ apiRouter.post("/auth/firebase-google", async (req, res) => {
     if (!user) {
       const isOwnerEmail = cleanEmail === "jameshut629@gmail.com" || cleanEmail === "adnanmrao@gmail.com";
       if (isOwnerEmail) {
-        const defaultHash = bcrypt2.hashSync(crypto2.randomBytes(16).toString("hex"), 10);
+        const defaultHash = bcrypt3.hashSync(crypto2.randomBytes(16).toString("hex"), 10);
         runQuery(`
           INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, status)
           VALUES (?, ?, ?, 'main_admin', 'full', 'all', 'active');
@@ -2049,19 +2142,6 @@ apiRouter.post("/auth/firebase-google", async (req, res) => {
     if (!user || user.status === "disabled") {
       return res.status(403).json({ error: "This account has been disabled. Please contact the administrator." });
     }
-    const token = generateToken();
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3).toISOString();
-    runQuery(`
-      INSERT INTO sessions (token, user_id, ip, user_agent, device, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?);
-    `, [token, user.id, clientInfo.ip, clientInfo.userAgent, clientInfo.device, expiresAt]);
-    runQuery(`
-      UPDATE users SET last_login_at = CURRENT_TIMESTAMP, last_login_ip = ?, last_active_at = CURRENT_TIMESTAMP WHERE id = ?;
-    `, [clientInfo.ip, user.id]);
-    runQuery(`
-      INSERT INTO login_logs (user_id, user_email, user_name, role, ip, device, browser, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'success');
-    `, [user.id, user.email, user.name, user.role, clientInfo.ip, clientInfo.device, clientInfo.browser]);
     const userPayload = {
       id: user.id,
       name: user.name,
@@ -2074,6 +2154,22 @@ apiRouter.post("/auth/firebase-google", async (req, res) => {
       status: user.status,
       two_factor_enabled: Boolean(user.two_factor_enabled)
     };
+    const token = generateToken(userPayload, 30);
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3).toISOString();
+    try {
+      runQuery(`
+        INSERT INTO sessions (token, user_id, ip, user_agent, device, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?);
+      `, [token, user.id, clientInfo.ip, clientInfo.userAgent, clientInfo.device, expiresAt]);
+      runQuery(`
+        UPDATE users SET last_login_at = CURRENT_TIMESTAMP, last_login_ip = ?, last_active_at = CURRENT_TIMESTAMP WHERE id = ?;
+      `, [clientInfo.ip, user.id]);
+      runQuery(`
+        INSERT INTO login_logs (user_id, user_email, user_name, role, ip, device, browser, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'success');
+      `, [user.id, user.email, user.name, user.role, clientInfo.ip, clientInfo.device, clientInfo.browser]);
+    } catch {
+    }
     if (uid) {
       getOrCreateUser(uid, user.email, user.name).catch((e) => {
         console.warn("Notice: Background Cloud SQL sync:", e.message);
@@ -2259,7 +2355,7 @@ apiRouter.post("/auth/2fa/disable", authenticate, async (req, res) => {
     );
     if (!user) return res.status(404).json({ error: "User not found" });
     if (current_password) {
-      const match = bcrypt2.compareSync(current_password, user.password_hash);
+      const match = bcrypt3.compareSync(current_password, user.password_hash);
       if (!match) return res.status(400).json({ error: "Incorrect password." });
     } else if (code && user.two_factor_secret) {
       const isValid = verifyTwoFactorToken(code, user.two_factor_secret);
@@ -2363,11 +2459,11 @@ apiRouter.post("/auth/change-password", authenticate, async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User account not found." });
     }
-    const matches = bcrypt2.compareSync(current_password, user.password_hash);
+    const matches = bcrypt3.compareSync(current_password, user.password_hash);
     if (!matches) {
       return res.status(400).json({ error: "Current password is incorrect." });
     }
-    const newHash = bcrypt2.hashSync(new_password, 10);
+    const newHash = bcrypt3.hashSync(new_password, 10);
     runQuery("UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;", [newHash, user.id]);
     logAudit(req.user, "UPDATE", "security", String(user.id), `Password changed successfully for ${user.email}`, req);
     const clientInfo = getClientInfo(req);
@@ -5306,7 +5402,7 @@ apiRouter.post("/users", authenticate, requireRoles("owner", "main_admin", "admi
     const finalPermission = permission_level || (role === "main_admin" || role === "owner" ? "full" : "limited");
     const finalCampus = role === "main_admin" || role === "owner" || role === "admin_hr" ? "all" : campus_access || "all";
     const finalModules = allowed_modules ? Array.isArray(allowed_modules) ? allowed_modules.join(",") : String(allowed_modules) : "all";
-    const passwordHash = bcrypt2.hashSync(password, 10);
+    const passwordHash = bcrypt3.hashSync(password, 10);
     const result = runQuery(`
       INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, allowed_modules, phone, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active');
@@ -5344,7 +5440,7 @@ apiRouter.post("/security/users", authenticate, requireRoles("owner", "main_admi
     const finalPermission = permission_level || (role === "main_admin" || role === "owner" ? "full" : "limited");
     const finalCampus = role === "main_admin" || role === "owner" || role === "admin_hr" ? "all" : campus_access || "all";
     const finalModules = allowed_modules ? Array.isArray(allowed_modules) ? allowed_modules.join(",") : String(allowed_modules) : "all";
-    const passwordHash = bcrypt2.hashSync(password, 10);
+    const passwordHash = bcrypt3.hashSync(password, 10);
     const result = runQuery(`
       INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, allowed_modules, phone, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active');
@@ -5479,7 +5575,7 @@ apiRouter.post("/users/:id/reset-password", authenticate, requireOwner, (req, re
     if (!new_password || new_password.length < 6) {
       return res.status(400).json({ error: "New password must be at least 6 characters long." });
     }
-    const hash = bcrypt2.hashSync(new_password, 10);
+    const hash = bcrypt3.hashSync(new_password, 10);
     runQuery("UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;", [hash, id]);
     runQuery("DELETE FROM sessions WHERE user_id = ?;", [id]);
     logAudit(req.user, "UPDATE", "users", id, "Reset user password and terminated all active sessions", req);
@@ -5496,7 +5592,7 @@ apiRouter.post("/admin/permanent-delete", authenticate, requireOwner, (req, res)
     }
     if (password) {
       const ownerUser = queryOne("SELECT password_hash FROM users WHERE id = ?;", [req.user.id]);
-      if (ownerUser && !bcrypt2.compareSync(password, ownerUser.password_hash)) {
+      if (ownerUser && !bcrypt3.compareSync(password, ownerUser.password_hash)) {
         return res.status(401).json({ error: "Invalid Owner password verification." });
       }
     }

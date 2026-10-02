@@ -46,9 +46,9 @@ export async function apiRequest<T = any>(
     headers
   });
 
-  if (response.status === 401) {
+  if (response.status === 401 && endpoint === '/api/auth/me') {
     clearStoredAuth();
-    // Dispatch auth expiration event
+    // Dispatch auth expiration event only when explicit session check fails
     window.dispatchEvent(new Event('digiskool:unauthorized'));
   }
 

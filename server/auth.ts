@@ -20,8 +20,49 @@ export interface AuthenticatedRequest extends Request {
   user?: UserPayload;
 }
 
-// Generate secure random session token
-export function generateToken(): string {
+const SESSION_SECRET = process.env.SESSION_SECRET || 'digiskool_institute_portal_master_key_2026_pk';
+
+export function signToken(user: UserPayload, expiryDays: number = 30): string {
+  const expiresAt = Date.now() + expiryDays * 24 * 60 * 60 * 1000;
+  const payload = {
+    id: user.id,
+    name: user.name,
+    email: user.email.toLowerCase().trim(),
+    role: user.role,
+    permission_level: user.permission_level || 'full',
+    campus_access: user.campus_access || 'all',
+    allowed_modules: user.allowed_modules || 'all',
+    phone: user.phone || '',
+    exp: expiresAt
+  };
+  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto.createHmac('sha256', SESSION_SECRET).update(payloadB64).digest('base64url');
+  return `dsk_${payloadB64}.${signature}`;
+}
+
+export function verifySignedToken(token: string): UserPayload | null {
+  if (!token || !token.startsWith('dsk_')) return null;
+  const raw = token.slice(4);
+  const parts = raw.split('.');
+  if (parts.length !== 2) return null;
+  const [payloadB64, signature] = parts;
+  const expectedSig = crypto.createHmac('sha256', SESSION_SECRET).update(payloadB64).digest('base64url');
+  if (signature !== expectedSig) return null;
+
+  try {
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
+    if (Date.now() > payload.exp) return null;
+    return payload as UserPayload;
+  } catch {
+    return null;
+  }
+}
+
+// Generate secure session token (supports both signed stateless tokens and random tokens)
+export function generateToken(user?: UserPayload, expiryDays: number = 30): string {
+  if (user && user.email) {
+    return signToken(user, expiryDays);
+  }
   return crypto.randomBytes(32).toString('hex');
 }
 
@@ -150,62 +191,128 @@ export function authenticate(req: AuthenticatedRequest, res: Response, next: Nex
   }
 
   const token = authHeader.split(' ')[1];
-  const session = queryOne<{
-    token: string;
-    user_id: number;
-    expires_at: string;
-    id: number;
-    name: string;
-    email: string;
-    role: string;
-    permission_level?: string;
-    campus_access?: string;
-    allowed_modules?: string;
-    phone: string;
-    status: string;
-    two_factor_enabled?: number;
-  }>(`
-    SELECT s.token, s.user_id, s.expires_at, u.id, u.name, u.email, u.role, u.permission_level, u.campus_access, u.allowed_modules, u.phone, u.status, u.two_factor_enabled
-    FROM sessions s
-    JOIN users u ON s.user_id = u.id
-    WHERE s.token = ?;
-  `, [token]);
 
-  if (!session) {
+  // 1. Check stateless signed token (instant & valid across ALL serverless instances and cold starts)
+  const tokenPayload = verifySignedToken(token);
+  if (tokenPayload) {
+    let dbUser: any = null;
+    try {
+      dbUser = queryOne<{
+        id: number;
+        name: string;
+        email: string;
+        role: string;
+        permission_level?: string;
+        campus_access?: string;
+        allowed_modules?: string;
+        phone?: string;
+        status: string;
+        two_factor_enabled?: number;
+      }>('SELECT * FROM users WHERE LOWER(email) = ?;', [tokenPayload.email.toLowerCase()]);
+
+      if (!dbUser) {
+        const defaultHash = bcrypt.hashSync('DigiSkool@2025', 10);
+        runQuery(`
+          INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, allowed_modules, phone, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active');
+        `, [
+          tokenPayload.name,
+          tokenPayload.email.toLowerCase(),
+          defaultHash,
+          tokenPayload.role,
+          tokenPayload.permission_level || 'full',
+          tokenPayload.campus_access || 'all',
+          tokenPayload.allowed_modules || 'all',
+          tokenPayload.phone || ''
+        ]);
+        dbUser = queryOne('SELECT * FROM users WHERE LOWER(email) = ?;', [tokenPayload.email.toLowerCase()]);
+      }
+    } catch {
+      // Non-blocking if table write has transient lock
+    }
+
+    if (dbUser && dbUser.status === 'disabled') {
+      return res.status(403).json({ error: 'This user account has been disabled by institute administration.' });
+    }
+
+    req.user = {
+      id: dbUser ? dbUser.id : tokenPayload.id,
+      name: dbUser ? dbUser.name : tokenPayload.name,
+      email: dbUser ? dbUser.email : tokenPayload.email,
+      role: dbUser ? dbUser.role : tokenPayload.role,
+      permission_level: dbUser?.permission_level || tokenPayload.permission_level || 'full',
+      campus_access: dbUser?.campus_access || tokenPayload.campus_access || 'all',
+      allowed_modules: dbUser?.allowed_modules || tokenPayload.allowed_modules || 'all',
+      phone: dbUser?.phone || tokenPayload.phone || '',
+      status: dbUser ? dbUser.status : 'active',
+      two_factor_enabled: Boolean(dbUser?.two_factor_enabled)
+    };
+
+    return next();
+  }
+
+  // 2. Fallback to sessions table in SQLite
+  try {
+    const session = queryOne<{
+      token: string;
+      user_id: number;
+      expires_at: string;
+      id: number;
+      name: string;
+      email: string;
+      role: string;
+      permission_level?: string;
+      campus_access?: string;
+      allowed_modules?: string;
+      phone: string;
+      status: string;
+      two_factor_enabled?: number;
+    }>(`
+      SELECT s.token, s.user_id, s.expires_at, u.id, u.name, u.email, u.role, u.permission_level, u.campus_access, u.allowed_modules, u.phone, u.status, u.two_factor_enabled
+      FROM sessions s
+      JOIN users u ON s.user_id = u.id
+      WHERE s.token = ?;
+    `, [token]);
+
+    if (!session) {
+      return res.status(401).json({ error: 'Session invalid or expired. Please log in again.' });
+    }
+
+    if (new Date(session.expires_at) < new Date()) {
+      runQuery('DELETE FROM sessions WHERE token = ?;', [token]);
+      return res.status(401).json({ error: 'Session has expired. Please log in again.' });
+    }
+
+    if (session.status === 'disabled') {
+      return res.status(403).json({ error: 'This user account has been disabled by institute administration.' });
+    }
+
+    // Update last active timestamps for user and session
+    try {
+      runQuery('UPDATE users SET last_active_at = CURRENT_TIMESTAMP WHERE id = ?;', [session.id]);
+      runQuery('UPDATE sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = ?;', [token]);
+    } catch {
+      // Non-blocking
+    }
+
+    req.user = {
+      id: session.id,
+      name: session.name,
+      email: session.email,
+      role: session.role,
+      permission_level: session.permission_level || 'full',
+      campus_access: session.campus_access || 'all',
+      allowed_modules: session.allowed_modules || 'all',
+      phone: session.phone,
+      status: session.status,
+      two_factor_enabled: Boolean(session.two_factor_enabled)
+    };
+
+    next();
+  } catch (err: any) {
+    console.error('Session lookup error:', err);
     return res.status(401).json({ error: 'Session invalid or expired. Please log in again.' });
   }
-
-  if (new Date(session.expires_at) < new Date()) {
-    runQuery('DELETE FROM sessions WHERE token = ?;', [token]);
-    return res.status(401).json({ error: 'Session has expired. Please log in again.' });
-  }
-
-  if (session.status === 'disabled') {
-    return res.status(403).json({ error: 'This user account has been disabled by institute administration.' });
-  }
-
-  // Update last active timestamps for user and session
-  try {
-    runQuery('UPDATE users SET last_active_at = CURRENT_TIMESTAMP WHERE id = ?;', [session.id]);
-    runQuery('UPDATE sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = ?;', [token]);
-  } catch {
-    // Non-blocking
-  }
-
-  req.user = {
-    id: session.id,
-    name: session.name,
-    email: session.email,
-    role: session.role,
-    permission_level: session.permission_level || 'full',
-    campus_access: session.campus_access || 'all',
-    allowed_modules: session.allowed_modules || 'all',
-    phone: session.phone,
-    status: session.status,
-    two_factor_enabled: Boolean(session.two_factor_enabled)
-  };
-
-  next();
 }
 
 // Role Authorization Middleware

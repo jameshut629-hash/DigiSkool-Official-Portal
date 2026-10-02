@@ -145,28 +145,7 @@ apiRouter.post('/auth/login', async (req: Request, res: Response) => {
       });
     }
 
-    // Create session
-    const token = generateToken();
-    const expiryDays = rememberMe ? 30 : 2;
-    const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString();
-
-    runQuery(`
-      INSERT INTO sessions (token, user_id, ip, user_agent, device, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?);
-    `, [token, user.id, clientInfo.ip, clientInfo.userAgent, clientInfo.device, expiresAt]);
-
-    // Update last login and active timestamp
-    runQuery(`
-      UPDATE users SET last_login_at = CURRENT_TIMESTAMP, last_login_ip = ?, last_active_at = CURRENT_TIMESTAMP WHERE id = ?;
-    `, [clientInfo.ip, user.id]);
-
-    // Record login log
-    runQuery(`
-      INSERT INTO login_logs (user_id, user_email, user_name, role, ip, device, browser, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'success');
-    `, [user.id, user.email, user.name, user.role, clientInfo.ip, clientInfo.device, clientInfo.browser]);
-
-    const userPayload = {
+    const userPayload: UserPayload = {
       id: user.id,
       name: user.name,
       email: user.email,
@@ -178,10 +157,44 @@ apiRouter.post('/auth/login', async (req: Request, res: Response) => {
       status: user.status,
       two_factor_enabled: Boolean(user.two_factor_enabled)
     };
+
+    // Create session (stateless signed token + db session backup)
+    const expiryDays = rememberMe ? 30 : 2;
+    const token = generateToken(userPayload, expiryDays);
+    const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString();
+
+    try {
+      runQuery(`
+        INSERT INTO sessions (token, user_id, ip, user_agent, device, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?);
+      `, [token, user.id, clientInfo.ip, clientInfo.userAgent, clientInfo.device, expiresAt]);
+    } catch {
+      // Non-blocking
+    }
+
+    // Update last login and active timestamp
+    try {
+      runQuery(`
+        UPDATE users SET last_login_at = CURRENT_TIMESTAMP, last_login_ip = ?, last_active_at = CURRENT_TIMESTAMP WHERE id = ?;
+      `, [clientInfo.ip, user.id]);
+
+      // Record login log
+      runQuery(`
+        INSERT INTO login_logs (user_id, user_email, user_name, role, ip, device, browser, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'success');
+      `, [user.id, user.email, user.name, user.role, clientInfo.ip, clientInfo.device, clientInfo.browser]);
+    } catch {
+      // Non-blocking
+    }
+
     sendLoginAlertEmail(userPayload, clientInfo);
 
     // Audit log
-    logAudit(userPayload, 'LOGIN', 'auth', String(user.id), `Logged in from ${clientInfo.ip} (${clientInfo.device})`, req);
+    try {
+      logAudit(userPayload, 'LOGIN', 'auth', String(user.id), `Logged in from ${clientInfo.ip} (${clientInfo.device})`, req);
+    } catch {
+      // Non-blocking
+    }
 
     res.json({
       token,
@@ -242,25 +255,7 @@ apiRouter.post('/auth/firebase-google', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'This account has been disabled. Please contact the administrator.' });
     }
 
-    // Create session (30 days for Google OAuth)
-    const token = generateToken();
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-    runQuery(`
-      INSERT INTO sessions (token, user_id, ip, user_agent, device, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?);
-    `, [token, user.id, clientInfo.ip, clientInfo.userAgent, clientInfo.device, expiresAt]);
-
-    runQuery(`
-      UPDATE users SET last_login_at = CURRENT_TIMESTAMP, last_login_ip = ?, last_active_at = CURRENT_TIMESTAMP WHERE id = ?;
-    `, [clientInfo.ip, user.id]);
-
-    runQuery(`
-      INSERT INTO login_logs (user_id, user_email, user_name, role, ip, device, browser, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'success');
-    `, [user.id, user.email, user.name, user.role, clientInfo.ip, clientInfo.device, clientInfo.browser]);
-
-    const userPayload = {
+    const userPayload: UserPayload = {
       id: user.id,
       name: user.name,
       email: user.email,
@@ -272,6 +267,28 @@ apiRouter.post('/auth/firebase-google', async (req: Request, res: Response) => {
       status: user.status,
       two_factor_enabled: Boolean(user.two_factor_enabled)
     };
+
+    // Create session (30 days for Google OAuth)
+    const token = generateToken(userPayload, 30);
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    try {
+      runQuery(`
+        INSERT INTO sessions (token, user_id, ip, user_agent, device, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?);
+      `, [token, user.id, clientInfo.ip, clientInfo.userAgent, clientInfo.device, expiresAt]);
+
+      runQuery(`
+        UPDATE users SET last_login_at = CURRENT_TIMESTAMP, last_login_ip = ?, last_active_at = CURRENT_TIMESTAMP WHERE id = ?;
+      `, [clientInfo.ip, user.id]);
+
+      runQuery(`
+        INSERT INTO login_logs (user_id, user_email, user_name, role, ip, device, browser, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'success');
+      `, [user.id, user.email, user.name, user.role, clientInfo.ip, clientInfo.device, clientInfo.browser]);
+    } catch {
+      // Non-blocking
+    }
     if (uid) {
       getOrCreateUser(uid, user.email, user.name).catch((e) => {
         console.warn('Notice: Background Cloud SQL sync:', e.message);
