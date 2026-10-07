@@ -696,41 +696,42 @@ function initSchemaAndSeed(db: Database) {
   // Seed Users with hashed password ('DigiSkool@2025')
   const defaultPasswordHash = bcrypt.hashSync('DigiSkool@2025', 10);
 
-  // The institutional portal must have ONLY ONE user: adnanmrao@gmail.com (as strictly requested)
-  // Ensure adnanmrao@gmail.com exists first
-  let adnanUser = queryOne<{ id: number }>('SELECT id FROM users WHERE LOWER(email) = "adnanmrao@gmail.com";');
-  if (!adnanUser) {
-    db.run(`
-      INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, allowed_modules, phone, status)
-      VALUES ('Adnan Rao (Main Admin)', 'adnanmrao@gmail.com', ?, 'owner', 'full', 'all', 'all', '0331-7155-174', 'active');
-    `, [defaultPasswordHash]);
-    adnanUser = queryOne<{ id: number }>('SELECT id FROM users WHERE LOWER(email) = "adnanmrao@gmail.com";');
-  } else {
-    db.run(`
-      UPDATE users SET name = 'Adnan Rao (Main Admin)', role = 'owner', permission_level = 'full', campus_access = 'all', allowed_modules = 'all', status = 'active'
-      WHERE id = ?;
-    `, [adnanUser.id]);
+  // Ensure authorized master administrators exist with full owner access
+  const masterAdmins = [
+    { email: 'adnanmrao@gmail.com', name: 'Adnan Rao (Main Admin)' },
+    { email: 'jameshut629@gmail.com', name: 'James Hunt (Main Admin)' }
+  ];
+
+  for (const adm of masterAdmins) {
+    const existing = queryOne<{ id: number }>('SELECT id FROM users WHERE LOWER(email) = ?;', [adm.email.toLowerCase()]);
+    if (!existing) {
+      db.run(`
+        INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, allowed_modules, phone, status)
+        VALUES (?, ?, ?, 'owner', 'full', 'all', 'all', '0331-7155-174', 'active');
+      `, [adm.name, adm.email.toLowerCase(), defaultPasswordHash]);
+    } else {
+      db.run(`
+        UPDATE users SET name = ?, role = 'owner', permission_level = 'full', campus_access = 'all', allowed_modules = 'all', status = 'active'
+        WHERE id = ?;
+      `, [adm.name, existing.id]);
+    }
   }
 
-  // Safely reassign foreign keys to adnanmrao and delete all other users
+  // Safely delete any other non-administrator accounts and their sessions
+  const adnanUser = queryOne<{ id: number }>('SELECT id FROM users WHERE LOWER(email) = "adnanmrao@gmail.com";');
   if (adnanUser) {
     try {
       const targetId = adnanUser.id;
       db.run('PRAGMA foreign_keys = OFF;');
-      db.run('UPDATE admissions SET created_by = ? WHERE created_by != ?;', [targetId, targetId]);
-      db.run('UPDATE fee_vouchers SET created_by = ? WHERE created_by != ?;', [targetId, targetId]);
-      db.run('UPDATE payments SET received_by = ? WHERE received_by IS NOT NULL AND received_by != ?;', [targetId, targetId]);
-      db.run('UPDATE payments SET voided_by = ? WHERE voided_by IS NOT NULL AND voided_by != ?;', [targetId, targetId]);
-      db.run('UPDATE expenses SET created_by = ? WHERE created_by != ?;', [targetId, targetId]);
-      db.run('UPDATE expenses SET approved_by = ? WHERE approved_by IS NOT NULL AND approved_by != ?;', [targetId, targetId]);
-      db.run('UPDATE expenses SET voided_by = ? WHERE voided_by IS NOT NULL AND voided_by != ?;', [targetId, targetId]);
-      db.run('UPDATE audit_logs SET user_id = ? WHERE user_id != ?;', [targetId, targetId]);
-      db.run('UPDATE login_logs SET user_id = ? WHERE user_id IS NOT NULL AND user_id != ?;', [targetId, targetId]);
-      db.run('DELETE FROM sessions WHERE user_id != ?;', [targetId]);
-      db.run('DELETE FROM users WHERE id != ?;', [targetId]);
+      db.run('UPDATE admissions SET created_by = ? WHERE created_by NOT IN (SELECT id FROM users WHERE LOWER(email) IN ("adnanmrao@gmail.com", "jameshut629@gmail.com"));', [targetId]);
+      db.run('UPDATE fee_vouchers SET created_by = ? WHERE created_by NOT IN (SELECT id FROM users WHERE LOWER(email) IN ("adnanmrao@gmail.com", "jameshut629@gmail.com"));', [targetId]);
+      db.run('UPDATE payments SET received_by = ? WHERE received_by IS NOT NULL AND received_by NOT IN (SELECT id FROM users WHERE LOWER(email) IN ("adnanmrao@gmail.com", "jameshut629@gmail.com"));', [targetId]);
+      db.run('UPDATE expenses SET created_by = ? WHERE created_by NOT IN (SELECT id FROM users WHERE LOWER(email) IN ("adnanmrao@gmail.com", "jameshut629@gmail.com"));', [targetId]);
+      db.run('DELETE FROM sessions WHERE user_id NOT IN (SELECT id FROM users WHERE LOWER(email) IN ("adnanmrao@gmail.com", "jameshut629@gmail.com"));');
+      db.run('DELETE FROM users WHERE LOWER(email) NOT IN ("adnanmrao@gmail.com", "jameshut629@gmail.com");');
       db.run('PRAGMA foreign_keys = ON;');
     } catch (e) {
-      console.error('Error cleaning non-adnanmrao users:', e);
+      console.error('Error cleaning non-admin users:', e);
       db.run('PRAGMA foreign_keys = ON;');
     }
   }

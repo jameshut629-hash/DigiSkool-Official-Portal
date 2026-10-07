@@ -335,7 +335,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const role = user?.role;
-  const isMainAdmin = role === 'main_admin' || role === 'owner';
+  const isMainAdmin = role === 'main_admin' || role === 'owner' || user?.email?.toLowerCase() === 'adnanmrao@gmail.com' || user?.email?.toLowerCase() === 'jameshut629@gmail.com';
   const isPrincipal = role === 'principal';
   const isAdminHR = role === 'admin_hr';
   const isOwner = isMainAdmin;

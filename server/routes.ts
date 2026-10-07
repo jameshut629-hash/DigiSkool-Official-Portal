@@ -267,7 +267,7 @@ apiRouter.post('/auth/firebase-google', async (req: Request, res: Response) => {
 
     // Authorized accounts check: user must already exist in database or be designated workspace owner
     if (!user) {
-      const isOwnerEmail = cleanEmail === 'adnanmrao@gmail.com';
+      const isOwnerEmail = cleanEmail === 'adnanmrao@gmail.com' || cleanEmail === 'jameshut629@gmail.com';
       if (isOwnerEmail) {
         const defaultHash = bcrypt.hashSync('DigiSkool@2025', 10);
         runQuery(`

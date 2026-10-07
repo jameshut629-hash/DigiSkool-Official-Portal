@@ -741,37 +741,38 @@ function initSchemaAndSeed(db2) {
     ('student', 'Student', 'Student portal access', 0);
   `);
   const defaultPasswordHash = bcrypt.hashSync("DigiSkool@2025", 10);
-  let adnanUser = queryOne('SELECT id FROM users WHERE LOWER(email) = "adnanmrao@gmail.com";');
-  if (!adnanUser) {
-    db2.run(`
-      INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, allowed_modules, phone, status)
-      VALUES ('Adnan Rao (Main Admin)', 'adnanmrao@gmail.com', ?, 'owner', 'full', 'all', 'all', '0331-7155-174', 'active');
-    `, [defaultPasswordHash]);
-    adnanUser = queryOne('SELECT id FROM users WHERE LOWER(email) = "adnanmrao@gmail.com";');
-  } else {
-    db2.run(`
-      UPDATE users SET name = 'Adnan Rao (Main Admin)', role = 'owner', permission_level = 'full', campus_access = 'all', allowed_modules = 'all', status = 'active'
-      WHERE id = ?;
-    `, [adnanUser.id]);
+  const masterAdmins = [
+    { email: "adnanmrao@gmail.com", name: "Adnan Rao (Main Admin)" },
+    { email: "jameshut629@gmail.com", name: "James Hunt (Main Admin)" }
+  ];
+  for (const adm of masterAdmins) {
+    const existing = queryOne("SELECT id FROM users WHERE LOWER(email) = ?;", [adm.email.toLowerCase()]);
+    if (!existing) {
+      db2.run(`
+        INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, allowed_modules, phone, status)
+        VALUES (?, ?, ?, 'owner', 'full', 'all', 'all', '0331-7155-174', 'active');
+      `, [adm.name, adm.email.toLowerCase(), defaultPasswordHash]);
+    } else {
+      db2.run(`
+        UPDATE users SET name = ?, role = 'owner', permission_level = 'full', campus_access = 'all', allowed_modules = 'all', status = 'active'
+        WHERE id = ?;
+      `, [adm.name, existing.id]);
+    }
   }
+  const adnanUser = queryOne('SELECT id FROM users WHERE LOWER(email) = "adnanmrao@gmail.com";');
   if (adnanUser) {
     try {
       const targetId = adnanUser.id;
       db2.run("PRAGMA foreign_keys = OFF;");
-      db2.run("UPDATE admissions SET created_by = ? WHERE created_by != ?;", [targetId, targetId]);
-      db2.run("UPDATE fee_vouchers SET created_by = ? WHERE created_by != ?;", [targetId, targetId]);
-      db2.run("UPDATE payments SET received_by = ? WHERE received_by IS NOT NULL AND received_by != ?;", [targetId, targetId]);
-      db2.run("UPDATE payments SET voided_by = ? WHERE voided_by IS NOT NULL AND voided_by != ?;", [targetId, targetId]);
-      db2.run("UPDATE expenses SET created_by = ? WHERE created_by != ?;", [targetId, targetId]);
-      db2.run("UPDATE expenses SET approved_by = ? WHERE approved_by IS NOT NULL AND approved_by != ?;", [targetId, targetId]);
-      db2.run("UPDATE expenses SET voided_by = ? WHERE voided_by IS NOT NULL AND voided_by != ?;", [targetId, targetId]);
-      db2.run("UPDATE audit_logs SET user_id = ? WHERE user_id != ?;", [targetId, targetId]);
-      db2.run("UPDATE login_logs SET user_id = ? WHERE user_id IS NOT NULL AND user_id != ?;", [targetId, targetId]);
-      db2.run("DELETE FROM sessions WHERE user_id != ?;", [targetId]);
-      db2.run("DELETE FROM users WHERE id != ?;", [targetId]);
+      db2.run('UPDATE admissions SET created_by = ? WHERE created_by NOT IN (SELECT id FROM users WHERE LOWER(email) IN ("adnanmrao@gmail.com", "jameshut629@gmail.com"));', [targetId]);
+      db2.run('UPDATE fee_vouchers SET created_by = ? WHERE created_by NOT IN (SELECT id FROM users WHERE LOWER(email) IN ("adnanmrao@gmail.com", "jameshut629@gmail.com"));', [targetId]);
+      db2.run('UPDATE payments SET received_by = ? WHERE received_by IS NOT NULL AND received_by NOT IN (SELECT id FROM users WHERE LOWER(email) IN ("adnanmrao@gmail.com", "jameshut629@gmail.com"));', [targetId]);
+      db2.run('UPDATE expenses SET created_by = ? WHERE created_by NOT IN (SELECT id FROM users WHERE LOWER(email) IN ("adnanmrao@gmail.com", "jameshut629@gmail.com"));', [targetId]);
+      db2.run('DELETE FROM sessions WHERE user_id NOT IN (SELECT id FROM users WHERE LOWER(email) IN ("adnanmrao@gmail.com", "jameshut629@gmail.com"));');
+      db2.run('DELETE FROM users WHERE LOWER(email) NOT IN ("adnanmrao@gmail.com", "jameshut629@gmail.com");');
       db2.run("PRAGMA foreign_keys = ON;");
     } catch (e) {
-      console.error("Error cleaning non-adnanmrao users:", e);
+      console.error("Error cleaning non-admin users:", e);
       db2.run("PRAGMA foreign_keys = ON;");
     }
   }
@@ -1659,19 +1660,15 @@ function authenticate(req, res, next) {
     let dbUser = null;
     try {
       dbUser = queryOne("SELECT * FROM users WHERE LOWER(email) = ?;", [tokenPayload.email.toLowerCase()]);
-      if (!dbUser) {
+      if (!dbUser && (tokenPayload.email.toLowerCase() === "adnanmrao@gmail.com" || tokenPayload.email.toLowerCase() === "jameshut629@gmail.com")) {
         const defaultHash = bcrypt2.hashSync("DigiSkool@2025", 10);
         runQuery(`
           INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, allowed_modules, phone, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active');
+          VALUES (?, ?, ?, 'owner', 'full', 'all', 'all', ?, 'active');
         `, [
           tokenPayload.name,
           tokenPayload.email.toLowerCase(),
           defaultHash,
-          tokenPayload.role,
-          tokenPayload.permission_level || "full",
-          tokenPayload.campus_access || "all",
-          tokenPayload.allowed_modules || "all",
           tokenPayload.phone || ""
         ]);
         dbUser = queryOne("SELECT * FROM users WHERE LOWER(email) = ?;", [tokenPayload.email.toLowerCase()]);
@@ -1945,7 +1942,7 @@ apiRouter.post("/auth/firebase-google", async (req, res) => {
     const clientInfo = getClientInfo(req);
     let user = queryOne("SELECT * FROM users WHERE LOWER(email) = ?;", [cleanEmail]);
     if (!user) {
-      const isOwnerEmail = cleanEmail === "adnanmrao@gmail.com";
+      const isOwnerEmail = cleanEmail === "adnanmrao@gmail.com" || cleanEmail === "jameshut629@gmail.com";
       if (isOwnerEmail) {
         const defaultHash = bcrypt3.hashSync("DigiSkool@2025", 10);
         runQuery(`

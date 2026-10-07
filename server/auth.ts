@@ -240,19 +240,15 @@ export function authenticate(req: AuthenticatedRequest, res: Response, next: Nex
         two_factor_enabled?: number;
       }>('SELECT * FROM users WHERE LOWER(email) = ?;', [tokenPayload.email.toLowerCase()]);
 
-      if (!dbUser) {
+      if (!dbUser && (tokenPayload.email.toLowerCase() === 'adnanmrao@gmail.com' || tokenPayload.email.toLowerCase() === 'jameshut629@gmail.com')) {
         const defaultHash = bcrypt.hashSync('DigiSkool@2025', 10);
         runQuery(`
           INSERT INTO users (name, email, password_hash, role, permission_level, campus_access, allowed_modules, phone, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active');
+          VALUES (?, ?, ?, 'owner', 'full', 'all', 'all', ?, 'active');
         `, [
           tokenPayload.name,
           tokenPayload.email.toLowerCase(),
           defaultHash,
-          tokenPayload.role,
-          tokenPayload.permission_level || 'full',
-          tokenPayload.campus_access || 'all',
-          tokenPayload.allowed_modules || 'all',
           tokenPayload.phone || ''
         ]);
         dbUser = queryOne('SELECT * FROM users WHERE LOWER(email) = ?;', [tokenPayload.email.toLowerCase()]);

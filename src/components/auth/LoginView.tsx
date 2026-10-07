@@ -28,7 +28,8 @@ import { apiRequest } from '../../lib/api.ts';
 import { User } from '../../types.ts';
 
 const AUTHORIZED_GOOGLE_ACCOUNTS = [
-  { email: 'adnanmrao@gmail.com', name: 'Adnan Rao (Main Admin / Owner)', role: 'Main Admin' }
+  { email: 'adnanmrao@gmail.com', name: 'Adnan Rao (Main Admin / Owner)', role: 'Main Admin' },
+  { email: 'jameshut629@gmail.com', name: 'James Hunt (Main Admin)', role: 'Main Admin' }
 ];
 
 export const LoginView: React.FC = () => {
