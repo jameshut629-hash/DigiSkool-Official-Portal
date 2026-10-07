@@ -481,15 +481,17 @@ export const SettingsView: React.FC = () => {
 
           <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col items-center justify-center gap-2 text-center">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dark Surface (Portal / Login)</span>
-            <DigiSkoolLogo variant="white" size="md" />
+            <div className="bg-white px-3 py-1.5 rounded-xl shadow-xs">
+              <DigiSkoolLogo variant="horizontal" size="md" />
+            </div>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-100 border border-slate-200 flex flex-col items-center justify-center gap-2 text-center">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Official Emblem (Favicon / Stamp)</span>
             <div className="flex items-center gap-3">
               <DigiSkoolLogo variant="emblem" size="md" />
-              <div className="p-1.5 bg-slate-950 rounded-xl">
-                <DigiSkoolLogo variant="emblem-white" size="sm" />
+              <div className="p-1.5 bg-white rounded-xl shadow-xs">
+                <DigiSkoolLogo variant="emblem" size="sm" />
               </div>
             </div>
           </div>

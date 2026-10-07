@@ -191,7 +191,9 @@ export const PublicAdmissionModal: React.FC<PublicAdmissionModalProps> = ({ init
             {/* Official Admission Card (App Preview exact layout) */}
             <div id="public-admission-success-card" className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4 print:border-black print:text-black">
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <DigiSkoolLogo variant="white" size="sm" />
+                <div className="bg-white px-2.5 py-1 rounded-lg shadow-xs">
+                  <DigiSkoolLogo variant="horizontal" size="xs" />
+                </div>
                 <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-[#6E1231]/30 text-rose-300 border border-[#6E1231]/40">
                   {submissionSuccess.student_id}
                 </span>

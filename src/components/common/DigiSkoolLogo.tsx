@@ -29,7 +29,7 @@ export const DigiSkoolLogo: React.FC<DigiSkoolLogoProps> = ({
   }[size] || 'h-11';
 
   if (variant === 'emblem' || variant === 'emblem-white') {
-    const emblemSrc = variant === 'emblem-white' ? '/digiskool-emblem-white.png' : '/digiskool-emblem.png';
+    const emblemSrc = '/digiskool-emblem.png';
     return (
       <div className={`relative inline-flex items-center justify-center shrink-0 ${heightClass} ${className}`}>
         <img
@@ -42,7 +42,8 @@ export const DigiSkoolLogo: React.FC<DigiSkoolLogoProps> = ({
     );
   }
 
-  const logoSrc = variant === 'white' ? '/digiskool-logo-white.png' : '/digiskool-logo.png';
+  // Always use authentic original full-color DigiSkool logo
+  const logoSrc = '/digiskool-logo.png';
 
   return (
     <div className={`inline-flex flex-col justify-center items-center ${className}`}>

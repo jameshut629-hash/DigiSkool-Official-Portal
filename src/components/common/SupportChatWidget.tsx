@@ -201,8 +201,8 @@ Jab koi user deletion attempt karta hai to Owner dashboard par Pending Deletion 
           {/* Header */}
           <div className="bg-[#6E1231] text-white p-4 flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white/10 p-1 flex items-center justify-center border border-white/20">
-                <img src="/digiskool-emblem-white.png" alt="DigiSkool" className="w-full h-full object-contain" />
+              <div className="w-9 h-9 rounded-xl bg-white p-1 flex items-center justify-center border border-white/20 shadow-xs">
+                <img src="/digiskool-emblem.png" alt="DigiSkool" className="w-full h-full object-contain" />
               </div>
               <div>
                 <h4 className="text-sm font-extrabold font-display leading-tight">DigiSkool Support Desk</h4>

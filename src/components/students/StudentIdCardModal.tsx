@@ -143,8 +143,8 @@ export const StudentIdCardModal: React.FC<StudentIdCardModalProps> = ({
             {/* Top Brand Banner */}
             <div className="bg-gradient-to-r from-[#500c22] via-[#6E1231] to-[#8d193f] p-3 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white/10 p-1 flex items-center justify-center">
-                  <DigiSkoolLogo className="h-6 w-auto brightness-200" />
+                <div className="w-8 h-8 rounded-lg bg-white p-1 flex items-center justify-center shadow-xs">
+                  <DigiSkoolLogo variant="emblem" size="xs" />
                 </div>
                 <div>
                   <h4 className="text-xs font-black tracking-wider uppercase font-display leading-tight">

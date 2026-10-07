@@ -123,7 +123,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, isOpe
           onClick={() => onSelectTab('dashboard')}
           title="DigiSkool - Institute of Digital Skills"
         >
-          <DigiSkoolLogo variant="white" size="md" className="group-hover:opacity-95 transition-opacity" />
+          <div className="bg-white hover:bg-white/95 px-3 py-1.5 rounded-xl shadow-xs transition-all flex items-center justify-center w-full">
+            <DigiSkoolLogo variant="horizontal" size="sm" />
+          </div>
         </button>
       </div>
 

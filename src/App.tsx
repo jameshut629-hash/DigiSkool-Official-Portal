@@ -133,8 +133,8 @@ const AppContent: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
         <div className="text-center flex flex-col items-center">
-          <div className="p-6 sm:p-8 bg-slate-900/80 border border-slate-800/80 rounded-3xl shadow-2xl flex items-center justify-center backdrop-blur-md">
-            <img src="/digiskool-logo-white.png" alt="DigiSkool" className="h-16 sm:h-20 w-auto object-contain animate-pulse select-none" />
+          <div className="p-6 sm:p-8 bg-white rounded-3xl shadow-2xl flex items-center justify-center border border-slate-100">
+            <img src="/digiskool-logo.png" alt="DigiSkool" className="h-16 sm:h-20 w-auto object-contain select-none" />
           </div>
           <div className="flex items-center gap-2.5 mt-5 text-slate-400">
             <span className="w-2 h-2 rounded-full bg-[#6E1231] animate-ping" />

@@ -224,8 +224,8 @@ export const LoginView: React.FC = () => {
 
       {/* Top Header / Institutional Identity */}
       <header className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 text-center">
-        <div className="inline-flex items-center justify-center p-3.5 rounded-3xl bg-white/5 border border-white/10 shadow-2xl backdrop-blur-md mb-3 hover:border-white/20 transition-all">
-          <DigiSkoolLogo variant="white" size="lg" />
+        <div className="inline-flex items-center justify-center px-6 py-4 rounded-3xl bg-white shadow-2xl border border-slate-100 mb-3 hover:shadow-rose-900/10 transition-all">
+          <DigiSkoolLogo variant="horizontal" size="xl" />
         </div>
         
         <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-slate-300 font-medium mt-1">
