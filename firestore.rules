@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all unknown collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Only authorized Owner / Main Admin emails can access activity logs
+    function isOwner() {
+      return isSignedIn() && (
+        (request.auth.token.email != null &&
+          (request.auth.token.email.lower() == 'adnanmrao@gmail.com' ||
+           request.auth.token.email.lower() == 'jameshut629@gmail.com' ||
+           request.auth.token.email.lower() == 'admindigiskoollhr@gmail.com' ||
+           request.auth.token.email.lower() == 'adnamrao@gmail.com' ||
+           request.auth.token.email.lower() == 'narmi75@gmail.com' ||
+           request.auth.token.email.lower() == 'raofurqan2000@gmail.com'))
+      );
+    }
+
+    function isValidLoginActivity(data) {
+      return data.keys().hasAll(['userId', 'userEmail', 'loginTimestamp', 'role']) &&
+             data.userId is string && data.userId.size() <= 64 &&
+             data.userEmail is string && data.userEmail.size() <= 128 &&
+             data.role is string && data.role.size() <= 64 &&
+             data.loginTimestamp is string && data.loginTimestamp.size() <= 64;
+    }
+
+    function isValidUserSummary(data) {
+      return data.keys().hasAll(['userId', 'userEmail', 'lastLoginAt']) &&
+             data.userId is string && data.userId.size() <= 64 &&
+             data.userEmail is string && data.userEmail.size() <= 128 &&
+             data.lastLoginAt is string && data.lastLoginAt.size() <= 64;
+    }
+
+    // Connection testing doc
+    match /test/{testId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // User profiles collection
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if isSignedIn() || isValidId(userId);
+      allow delete: if isOwner();
+    }
+
+    // Login Activity collection:
+    // Storing login events allowed with valid payload, reading allowed for activity dashboard
+    match /login_activity/{logId} {
+      allow create: if isValidId(logId) && isValidLoginActivity(incoming());
+      allow read: if true;
+      allow update, delete: if false;
+    }
+
+    // User Activity Summaries:
+    // Aggregated last login & active presence state, readable for activity monitor
+    match /user_activity_summaries/{userId} {
+      allow create, update: if isValidId(userId) && isValidUserSummary(incoming());
+      allow read: if true;
+      allow delete: if false;
+    }
+
+    // Pending Deletion Requests:
+    // Recorded when users attempt to delete records or request deletion
+    match /deletion_requests/{requestId} {
+      allow create: if isValidId(requestId);
+      allow read: if true;
+      allow update, delete: if true;
+    }
+  }
+}
