@@ -1,0 +1,6 @@
+{
+  "name": "DigiSkool-Institute of Digital Skills",
+  "description": "Institute management system for DigiSkool (Lahore & Okara campuses, Contact: 0331-7155174) managing admissions, students, courses, 2-part fee vouchers, payments, expenses, and staff management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
