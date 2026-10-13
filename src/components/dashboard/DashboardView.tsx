@@ -423,34 +423,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // MANAGEMENT EXECUTIVE DASHBOARD (Owner, Admin, Accountant, Admission Officer)
   // ==========================================
 
-  // Lahore vs Okara campus distinct data & summaries
-  const lahoreStudentsCount = Math.round((stats.totalStudents || 38) * 0.6);
-  const lahoreActiveCount = Math.round((stats.activeStudents || 34) * 0.6);
-  const lahoreTodayCash = stats.todayCampusBreakdown?.find(c => c.campus?.toLowerCase().includes('lahore'))?.total ?? 20000;
-  const lahoreMonthlyInflow = Math.round((stats.monthlyCollection || 485000) * 0.62);
-  const lahoreOutstandingDues = Math.round((stats.outstandingFees || 124000) * 0.58);
-  const lahoreMonthlyExp = Math.round((stats.monthlyExpenses || 210000) * 0.62);
+  // Lahore vs Okara campus distinct live data & summaries (no hardcoded dummy fallbacks)
+  const lahoreMetrics = splitData?.lahore;
+  const okaraMetrics = splitData?.okara;
+
+  const lahoreStudentsCount = lahoreMetrics ? lahoreMetrics.totalStudents : Math.round((stats.totalStudents || 0) * 0.6);
+  const lahoreActiveCount = lahoreMetrics ? lahoreMetrics.activeStudents : Math.round((stats.activeStudents || 0) * 0.6);
+  const lahoreTodayCash = lahoreMetrics ? lahoreMetrics.todayCollection : (stats.todayCampusBreakdown?.find(c => c.campus?.toLowerCase().includes('lahore'))?.total ?? 0);
+  const lahoreMonthlyInflow = lahoreMetrics ? lahoreMetrics.monthlyCollection : Math.round((stats.monthlyCollection || 0) * 0.62);
+  const lahoreOutstandingDues = lahoreMetrics ? lahoreMetrics.outstandingFees : Math.round((stats.outstandingFees || 0) * 0.58);
+  const lahoreMonthlyExp = lahoreMetrics ? lahoreMetrics.monthlyExpenses : Math.round((stats.monthlyExpenses || 0) * 0.62);
   const lahoreNetSurplus = lahoreMonthlyInflow - lahoreMonthlyExp;
 
-  const okaraStudentsCount = (stats.totalStudents || 38) - lahoreStudentsCount;
-  const okaraActiveCount = (stats.activeStudents || 34) - lahoreActiveCount;
-  const okaraTodayCash = stats.todayCampusBreakdown?.find(c => c.campus?.toLowerCase().includes('okara'))?.total ?? 15000;
-  const okaraMonthlyInflow = (stats.monthlyCollection || 485000) - lahoreMonthlyInflow;
-  const okaraOutstandingDues = (stats.outstandingFees || 124000) - lahoreOutstandingDues;
-  const okaraMonthlyExp = (stats.monthlyExpenses || 210000) - lahoreMonthlyExp;
+  const okaraStudentsCount = okaraMetrics ? okaraMetrics.totalStudents : ((stats.totalStudents || 0) - lahoreStudentsCount);
+  const okaraActiveCount = okaraMetrics ? okaraMetrics.activeStudents : ((stats.activeStudents || 0) - lahoreActiveCount);
+  const okaraTodayCash = okaraMetrics ? okaraMetrics.todayCollection : (stats.todayCampusBreakdown?.find(c => c.campus?.toLowerCase().includes('okara'))?.total ?? 0);
+  const okaraMonthlyInflow = okaraMetrics ? okaraMetrics.monthlyCollection : ((stats.monthlyCollection || 0) - lahoreMonthlyInflow);
+  const okaraOutstandingDues = okaraMetrics ? okaraMetrics.outstandingFees : ((stats.outstandingFees || 0) - lahoreOutstandingDues);
+  const okaraMonthlyExp = okaraMetrics ? okaraMetrics.monthlyExpenses : ((stats.monthlyExpenses || 0) - lahoreMonthlyExp);
   const okaraNetSurplus = okaraMonthlyInflow - okaraMonthlyExp;
 
   // Active view values based on campusFilter
-  const activeStudentsDisplay = campusFilter === 'lahore' ? lahoreActiveCount : (campusFilter === 'okara' ? okaraActiveCount : (stats.activeStudents || 34));
-  const totalStudentsDisplay = campusFilter === 'lahore' ? lahoreStudentsCount : (campusFilter === 'okara' ? okaraStudentsCount : (stats.totalStudents || 38));
-  const todayCollectionDisplay = campusFilter === 'lahore' ? lahoreTodayCash : (campusFilter === 'okara' ? okaraTodayCash : (stats.todayCollection || 35000));
-  const monthlyCollectionDisplay = campusFilter === 'lahore' ? lahoreMonthlyInflow : (campusFilter === 'okara' ? okaraMonthlyInflow : (stats.monthlyCollection || 485000));
-  const outstandingFeesDisplay = campusFilter === 'lahore' ? lahoreOutstandingDues : (campusFilter === 'okara' ? okaraOutstandingDues : (stats.outstandingFees || 124000));
-  const monthlyExpensesDisplay = campusFilter === 'lahore' ? lahoreMonthlyExp : (campusFilter === 'okara' ? okaraMonthlyExp : (stats.monthlyExpenses || 210000));
-  const netIncomeDisplay = campusFilter === 'lahore' ? lahoreNetSurplus : (campusFilter === 'okara' ? okaraNetSurplus : (stats.netIncome || 275000));
+  const activeStudentsDisplay = campusFilter === 'lahore' ? lahoreActiveCount : (campusFilter === 'okara' ? okaraActiveCount : (stats.activeStudents || 0));
+  const totalStudentsDisplay = campusFilter === 'lahore' ? lahoreStudentsCount : (campusFilter === 'okara' ? okaraStudentsCount : (stats.totalStudents || 0));
+  const todayCollectionDisplay = campusFilter === 'lahore' ? lahoreTodayCash : (campusFilter === 'okara' ? okaraTodayCash : (stats.todayCollection || 0));
+  const monthlyCollectionDisplay = campusFilter === 'lahore' ? lahoreMonthlyInflow : (campusFilter === 'okara' ? okaraMonthlyInflow : (stats.monthlyCollection || 0));
+  const outstandingFeesDisplay = campusFilter === 'lahore' ? lahoreOutstandingDues : (campusFilter === 'okara' ? okaraOutstandingDues : (stats.outstandingFees || 0));
+  const monthlyExpensesDisplay = campusFilter === 'lahore' ? lahoreMonthlyExp : (campusFilter === 'okara' ? okaraMonthlyExp : (stats.monthlyExpenses || 0));
+  const netIncomeDisplay = campusFilter === 'lahore' ? lahoreNetSurplus : (campusFilter === 'okara' ? okaraNetSurplus : (stats.netIncome || 0));
 
   // Monthly expected fees based on campusFilter or monthlyCollectionSummary
-  const totalExpectedFees = stats.monthlyCollectionSummary?.expected ?? (stats.monthlyExpectedFees || (stats.monthlyCollection || 485000) + (stats.outstandingFees || 124000));
+  const totalExpectedFees = stats.monthlyCollectionSummary?.expected ?? (stats.monthlyExpectedFees || ((stats.monthlyCollection || 0) + (stats.outstandingFees || 0)));
   const lahoreExpectedFees = stats.monthlyCollectionSummary?.campusBreakdown?.find(c => c.campus?.toLowerCase().includes('lahore'))?.expected 
     ?? Math.round(totalExpectedFees * 0.6);
   const okaraExpectedFees = stats.monthlyCollectionSummary?.campusBreakdown?.find(c => c.campus?.toLowerCase().includes('okara'))?.expected 
@@ -1201,25 +1204,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Chart Bars Render */}
             <div className="h-56 flex items-end justify-between gap-3 pt-6 px-2 border-b border-slate-200">
               {(() => {
-                const trends = charts?.campusComparativeTrends || [
-                  { month: 'Oct', lahoreRevenue: 198000, okaraRevenue: 122000, lahoreEnrollments: 8, okaraEnrollments: 5 },
-                  { month: 'Nov', lahoreRevenue: 242000, okaraRevenue: 148000, lahoreEnrollments: 10, okaraEnrollments: 6 },
-                  { month: 'Dec', lahoreRevenue: 260000, okaraRevenue: 160000, lahoreEnrollments: 11, okaraEnrollments: 7 },
-                  { month: 'Jan', lahoreRevenue: 279000, okaraRevenue: 171000, lahoreEnrollments: 13, okaraEnrollments: 8 },
-                  { month: 'Feb', lahoreRevenue: 291000, okaraRevenue: 179000, lahoreEnrollments: 14, okaraEnrollments: 9 },
-                  { month: 'Mar', lahoreRevenue: 300000, okaraRevenue: 185000, lahoreEnrollments: 15, okaraEnrollments: 10 }
-                ];
+                const trends = charts?.campusComparativeTrends && charts.campusComparativeTrends.length > 0
+                  ? charts.campusComparativeTrends
+                  : [
+                      { month: 'Oct', lahoreRevenue: 0, okaraRevenue: 0, lahoreEnrollments: 0, okaraEnrollments: 0 },
+                      { month: 'Nov', lahoreRevenue: 0, okaraRevenue: 0, lahoreEnrollments: 0, okaraEnrollments: 0 },
+                      { month: 'Dec', lahoreRevenue: 0, okaraRevenue: 0, lahoreEnrollments: 0, okaraEnrollments: 0 },
+                      { month: 'Jan', lahoreRevenue: 0, okaraRevenue: 0, lahoreEnrollments: 0, okaraEnrollments: 0 },
+                      { month: 'Feb', lahoreRevenue: 0, okaraRevenue: 0, lahoreEnrollments: 0, okaraEnrollments: 0 },
+                      { month: 'Mar', lahoreRevenue: 0, okaraRevenue: 0, lahoreEnrollments: 0, okaraEnrollments: 0 }
+                    ];
 
                 if (comparativeMetric === 'cashflow') {
-                  const monthlyCashflow = charts?.monthlyTrends || [
-                    { month: 'Oct', collection: 320000, expenses: 180000 },
-                    { month: 'Nov', collection: 390000, expenses: 195000 },
-                    { month: 'Dec', collection: 420000, expenses: 205000 },
-                    { month: 'Jan', collection: 450000, expenses: 210000 },
-                    { month: 'Feb', collection: 470000, expenses: 200000 },
-                    { month: 'Mar', collection: 485000, expenses: 210000 }
-                  ];
-                  const maxVal = Math.max(...monthlyCashflow.map((t: any) => Math.max(t.collection, t.expenses)), 100000);
+                  const monthlyCashflow = charts?.monthlyTrends && charts.monthlyTrends.length > 0
+                    ? charts.monthlyTrends
+                    : [
+                        { month: 'Oct', collection: 0, expenses: 0 },
+                        { month: 'Nov', collection: 0, expenses: 0 },
+                        { month: 'Dec', collection: 0, expenses: 0 },
+                        { month: 'Jan', collection: 0, expenses: 0 },
+                        { month: 'Feb', collection: 0, expenses: 0 },
+                        { month: 'Mar', collection: 0, expenses: 0 }
+                      ];
+                  const maxVal = Math.max(...monthlyCashflow.map((t: any) => Math.max(t.collection || 0, t.expenses || 0)), 10000);
 
                   return monthlyCashflow.map((item: any, idx: number) => {
                     const colHeight = Math.max(12, Math.round((item.collection / maxVal) * 160));
@@ -1347,7 +1354,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span className="font-extrabold text-slate-900 block mt-0.5 font-display">
                 {lahoreActiveCount} LHR • {okaraActiveCount} OKR
               </span>
-              <span className="text-[10px] text-slate-500">Total: {stats?.activeStudents || 34} Active</span>
+              <span className="text-[10px] text-slate-500">Total: {stats?.activeStudents || 0} Active</span>
             </div>
 
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
@@ -1427,39 +1434,47 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
-              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                <tr>
-                  <th className="p-2.5">Receipt #</th>
-                  <th className="p-2.5">Student</th>
-                  <th className="p-2.5">Amount</th>
-                  <th className="p-2.5">Mode</th>
-                  <th className="p-2.5 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {stats?.recentPayments?.map((p: any) => (
-                  <tr key={p.id} className="hover:bg-slate-50/60">
-                    <td className="p-2.5 font-mono font-bold text-slate-900">{p.receipt_no}</td>
-                    <td className="p-2.5 font-medium text-slate-800">{p.student_name}</td>
-                    <td className="p-2.5 font-bold text-emerald-600">{formatPKR(p.amount)}</td>
-                    <td className="p-2.5">
-                      <span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] text-slate-600">
-                        {p.payment_method}
-                      </span>
-                    </td>
-                    <td className="p-2.5 text-right">
-                      <button
-                        onClick={() => onOpenPrintReceipt(p.id)}
-                        className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-semibold text-slate-700 transition-colors"
-                      >
-                        Receipt
-                      </button>
-                    </td>
+            {(!stats?.recentPayments || stats.recentPayments.length === 0) ? (
+              <div className="py-8 text-center text-slate-400">
+                <Receipt className="w-8 h-8 mx-auto text-slate-300 stroke-1 mb-2" />
+                <p className="text-xs font-medium text-slate-500">No fee receipts recorded yet</p>
+                <p className="text-[11px] text-slate-400">New fee receipts will appear here in real-time when recorded.</p>
+              </div>
+            ) : (
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                  <tr>
+                    <th className="p-2.5">Receipt #</th>
+                    <th className="p-2.5">Student</th>
+                    <th className="p-2.5">Amount</th>
+                    <th className="p-2.5">Mode</th>
+                    <th className="p-2.5 text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {stats.recentPayments.map((p: any) => (
+                    <tr key={p.id} className="hover:bg-slate-50/60">
+                      <td className="p-2.5 font-mono font-bold text-slate-900">{p.receipt_no}</td>
+                      <td className="p-2.5 font-medium text-slate-800">{p.student_name}</td>
+                      <td className="p-2.5 font-bold text-emerald-600">{formatPKR(p.amount)}</td>
+                      <td className="p-2.5">
+                        <span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] text-slate-600">
+                          {p.payment_method}
+                        </span>
+                      </td>
+                      <td className="p-2.5 text-right">
+                        <button
+                          onClick={() => onOpenPrintReceipt(p.id)}
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-semibold text-slate-700 transition-colors"
+                        >
+                          Receipt
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -1479,28 +1494,36 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
-              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                <tr>
-                  <th className="p-2.5">Adm #</th>
-                  <th className="p-2.5">Student</th>
-                  <th className="p-2.5">Course</th>
-                  <th className="p-2.5">Fee Payable</th>
-                  <th className="p-2.5">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {stats?.recentAdmissions?.map((adm: any) => (
-                  <tr key={adm.id} className="hover:bg-slate-50/60">
-                    <td className="p-2.5 font-mono font-bold text-slate-900">{adm.admission_no}</td>
-                    <td className="p-2.5 font-medium text-slate-800">{adm.student_name}</td>
-                    <td className="p-2.5 text-slate-600 truncate max-w-[120px]">{adm.course_name}</td>
-                    <td className="p-2.5 font-bold text-slate-900">{formatPKR(adm.final_payable)}</td>
-                    <td className="p-2.5 text-slate-500 text-[11px]">{formatDate(adm.admission_date)}</td>
+            {(!stats?.recentAdmissions || stats.recentAdmissions.length === 0) ? (
+              <div className="py-8 text-center text-slate-400">
+                <GraduationCap className="w-8 h-8 mx-auto text-slate-300 stroke-1 mb-2" />
+                <p className="text-xs font-medium text-slate-500">No student admissions recorded yet</p>
+                <p className="text-[11px] text-slate-400">Click "+ New Admission" to enroll your first student.</p>
+              </div>
+            ) : (
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                  <tr>
+                    <th className="p-2.5">Adm #</th>
+                    <th className="p-2.5">Student</th>
+                    <th className="p-2.5">Course</th>
+                    <th className="p-2.5">Fee Payable</th>
+                    <th className="p-2.5">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {stats.recentAdmissions.map((adm: any) => (
+                    <tr key={adm.id} className="hover:bg-slate-50/60">
+                      <td className="p-2.5 font-mono font-bold text-slate-900">{adm.admission_no}</td>
+                      <td className="p-2.5 font-medium text-slate-800">{adm.student_name}</td>
+                      <td className="p-2.5 text-slate-600 truncate max-w-[120px]">{adm.course_name}</td>
+                      <td className="p-2.5 font-bold text-slate-900">{formatPKR(adm.final_payable)}</td>
+                      <td className="p-2.5 text-slate-500 text-[11px]">{formatDate(adm.admission_date)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>

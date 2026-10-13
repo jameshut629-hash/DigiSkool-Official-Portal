@@ -1152,11 +1152,8 @@ function initSchemaAndSeed(db: Database) {
     }
   }
 
-  // Seed authentic initial students with official course-prefixed IDs (DM, OM, VE, GD, AI, WD)
-  const studentCount = queryOne<{ c: number }>('SELECT COUNT(*) as c FROM students;');
-  if (!studentCount || studentCount.c === 0) {
-    seedInitialStudentsAndVouchers(db);
-  }
+  // Production Mode: Do not automatically re-seed dummy students when database is zeroed
+  // Real admissions and student records will be created live by administrators via the portal.
 }
 
 export function getCourseInitials(courseNameOrCode: string | undefined | null): string {

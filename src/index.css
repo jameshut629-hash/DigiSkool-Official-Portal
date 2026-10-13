@@ -278,66 +278,143 @@ html.dark .fixed.inset-0 .bg-white {
   }
 }
 
-/* 3D Dashboard Cards & Tactile Depth */
+/* High-Fidelity 3D Dashboard Tactile Depth & Ambient Lighting */
 .card-3d {
   position: relative;
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 20px -3px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  border-radius: 1.125rem;
+  background: #ffffff;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.25s ease;
+  box-shadow: 
+    0 1px 2px 0 rgba(0, 0, 0, 0.04),
+    0 6px 14px -2px rgba(15, 23, 42, 0.06),
+    0 12px 28px -4px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.03);
 }
 
 .card-3d:hover {
-  transform: translateY(-4px) scale(1.008);
-  box-shadow: 0 14px 28px -4px rgba(0, 0, 0, 0.1), 0 6px 12px -2px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transform: translateY(-5px) scale(1.006);
+  box-shadow: 
+    0 2px 4px 0 rgba(0, 0, 0, 0.04),
+    0 14px 28px -4px rgba(15, 23, 42, 0.1),
+    0 24px 48px -8px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 0 rgba(255, 255, 255, 1),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.02);
 }
 
 .card-3d-emerald {
-  background: linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%);
-  border: 1px solid rgba(16, 185, 129, 0.28);
-  box-shadow: 0 4px 8px -1px rgba(16, 185, 129, 0.08), 0 10px 22px -3px rgba(5, 150, 105, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: linear-gradient(145deg, #ffffff 0%, #f7fdf9 40%, #edfcf2 100%);
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  box-shadow: 
+    0 2px 4px 0 rgba(16, 185, 129, 0.04),
+    0 8px 18px -2px rgba(5, 150, 105, 0.1),
+    0 16px 32px -4px rgba(16, 185, 129, 0.06),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 6px 0 rgba(16, 185, 129, 0.05);
 }
 
 .card-3d-emerald:hover {
-  transform: translateY(-4px) scale(1.008);
-  border-color: rgba(16, 185, 129, 0.45);
-  box-shadow: 0 14px 30px -4px rgba(16, 185, 129, 0.2), 0 8px 16px -2px rgba(5, 150, 105, 0.12), inset 0 1px 0 rgba(255, 255, 255, 1);
+  transform: translateY(-5px) scale(1.008);
+  border-color: rgba(16, 185, 129, 0.55);
+  box-shadow: 
+    0 4px 8px 0 rgba(16, 185, 129, 0.08),
+    0 18px 36px -4px rgba(5, 150, 105, 0.22),
+    0 30px 60px -8px rgba(16, 185, 129, 0.14),
+    inset 0 1px 0 0 rgba(255, 255, 255, 1),
+    inset 0 -2px 8px 0 rgba(16, 185, 129, 0.08);
 }
 
 .card-3d-amber {
-  background: linear-gradient(145deg, #ffffff 0%, #fffbeb 100%);
-  border: 1px solid rgba(245, 158, 11, 0.28);
-  box-shadow: 0 4px 8px -1px rgba(245, 158, 11, 0.08), 0 10px 22px -3px rgba(217, 119, 6, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: linear-gradient(145deg, #ffffff 0%, #fffdf5 40%, #fef8e7 100%);
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  box-shadow: 
+    0 2px 4px 0 rgba(245, 158, 11, 0.04),
+    0 8px 18px -2px rgba(217, 119, 6, 0.1),
+    0 16px 32px -4px rgba(245, 158, 11, 0.06),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 6px 0 rgba(245, 158, 11, 0.05);
 }
 
 .card-3d-amber:hover {
-  transform: translateY(-4px) scale(1.008);
-  border-color: rgba(245, 158, 11, 0.45);
-  box-shadow: 0 14px 30px -4px rgba(245, 158, 11, 0.2), 0 8px 16px -2px rgba(217, 119, 6, 0.12), inset 0 1px 0 rgba(255, 255, 255, 1);
+  transform: translateY(-5px) scale(1.008);
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow: 
+    0 4px 8px 0 rgba(245, 158, 11, 0.08),
+    0 18px 36px -4px rgba(217, 119, 6, 0.22),
+    0 30px 60px -8px rgba(245, 158, 11, 0.14),
+    inset 0 1px 0 0 rgba(255, 255, 255, 1),
+    inset 0 -2px 8px 0 rgba(245, 158, 11, 0.08);
 }
 
 .card-3d-maroon {
-  background: linear-gradient(145deg, #ffffff 0%, #fdf2f4 100%);
-  border: 1px solid rgba(110, 18, 49, 0.25);
-  box-shadow: 0 4px 8px -1px rgba(110, 18, 49, 0.08), 0 10px 22px -3px rgba(110, 18, 49, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: linear-gradient(145deg, #ffffff 0%, #fdf5f7 40%, #fae8ec 100%);
+  border: 1px solid rgba(110, 18, 49, 0.3);
+  box-shadow: 
+    0 2px 4px 0 rgba(110, 18, 49, 0.04),
+    0 8px 18px -2px rgba(110, 18, 49, 0.12),
+    0 16px 32px -4px rgba(110, 18, 49, 0.08),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 6px 0 rgba(110, 18, 49, 0.05);
 }
 
 .card-3d-maroon:hover {
-  transform: translateY(-4px) scale(1.008);
-  border-color: rgba(110, 18, 49, 0.45);
-  box-shadow: 0 14px 30px -4px rgba(110, 18, 49, 0.22), 0 8px 16px -2px rgba(110, 18, 49, 0.14), inset 0 1px 0 rgba(255, 255, 255, 1);
+  transform: translateY(-5px) scale(1.008);
+  border-color: rgba(110, 18, 49, 0.55);
+  box-shadow: 
+    0 4px 8px 0 rgba(110, 18, 49, 0.08),
+    0 18px 36px -4px rgba(110, 18, 49, 0.24),
+    0 30px 60px -8px rgba(110, 18, 49, 0.16),
+    inset 0 1px 0 0 rgba(255, 255, 255, 1),
+    inset 0 -2px 8px 0 rgba(110, 18, 49, 0.08);
 }
 
 .card-3d-blue {
-  background: linear-gradient(145deg, #ffffff 0%, #eff6ff 100%);
-  border: 1px solid rgba(59, 130, 246, 0.25);
-  box-shadow: 0 4px 8px -1px rgba(59, 130, 246, 0.08), 0 10px 22px -3px rgba(37, 99, 235, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: linear-gradient(145deg, #ffffff 0%, #f6faff 40%, #eef5fc 100%);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 
+    0 2px 4px 0 rgba(59, 130, 246, 0.04),
+    0 8px 18px -2px rgba(37, 99, 235, 0.1),
+    0 16px 32px -4px rgba(59, 130, 246, 0.06),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 6px 0 rgba(59, 130, 246, 0.05);
 }
 
 .card-3d-blue:hover {
-  transform: translateY(-4px) scale(1.008);
-  border-color: rgba(59, 130, 246, 0.45);
-  box-shadow: 0 14px 30px -4px rgba(59, 130, 246, 0.2), 0 8px 16px -2px rgba(37, 99, 235, 0.12), inset 0 1px 0 rgba(255, 255, 255, 1);
+  transform: translateY(-5px) scale(1.008);
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 
+    0 4px 8px 0 rgba(59, 130, 246, 0.08),
+    0 18px 36px -4px rgba(37, 99, 235, 0.22),
+    0 30px 60px -8px rgba(59, 130, 246, 0.14),
+    inset 0 1px 0 0 rgba(255, 255, 255, 1),
+    inset 0 -2px 8px 0 rgba(59, 130, 246, 0.08);
 }
 
 .icon-3d {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  position: relative;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 
+    0 2px 4px 0 rgba(0, 0, 0, 0.08),
+    0 4px 8px -1px rgba(0, 0, 0, 0.06),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.06);
 }
+
+.card-3d:hover .icon-3d {
+  transform: scale(1.1) rotate(-3deg);
+  box-shadow: 
+    0 4px 8px 0 rgba(0, 0, 0, 0.12),
+    0 6px 12px -1px rgba(0, 0, 0, 0.08),
+    inset 0 1px 2px 0 rgba(255, 255, 255, 0.95);
+}
+
+/* Subtle 3D Depth Backdrop for Dashboard Header Panels */
+.panel-3d-header {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #0b1120 100%);
+  box-shadow: 
+    0 8px 24px -4px rgba(15, 23, 42, 0.25),
+    0 20px 40px -8px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.4);
+}
+

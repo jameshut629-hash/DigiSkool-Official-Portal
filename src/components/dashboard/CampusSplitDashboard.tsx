@@ -76,8 +76,8 @@ export const CampusSplitDashboard: React.FC<CampusSplitDashboardProps> = ({
     avgRevenuePerStudent: 0,
     cashPercentage: 0,
     digitalPercentage: 0,
-    recentPayments: (stats?.recentPayments || []).slice(0, 3),
-    recentAdmissions: (stats?.recentAdmissions || []).slice(0, 3)
+    recentPayments: (stats?.recentPayments || []).filter(p => !p.campus || p.campus.toLowerCase().includes('lahore')),
+    recentAdmissions: (stats?.recentAdmissions || []).filter(a => !a.campus || a.campus.toLowerCase().includes('lahore'))
   };
 
   const defaultOkara: CampusPerformanceMetrics = {
@@ -108,8 +108,8 @@ export const CampusSplitDashboard: React.FC<CampusSplitDashboardProps> = ({
     avgRevenuePerStudent: 0,
     cashPercentage: 0,
     digitalPercentage: 0,
-    recentPayments: (stats?.recentPayments || []).slice(1, 4),
-    recentAdmissions: (stats?.recentAdmissions || []).slice(1, 4)
+    recentPayments: (stats?.recentPayments || []).filter(p => p.campus && p.campus.toLowerCase().includes('okara')),
+    recentAdmissions: (stats?.recentAdmissions || []).filter(a => a.campus && a.campus.toLowerCase().includes('okara'))
   };
 
   const lahore = splitData?.lahore || defaultLahore;
